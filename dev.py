@@ -26,7 +26,7 @@ def executar():
 
     clear_console()
 
-    print("\nIniciando programa :)...\n") #! ver dps pq nao esta atualizando no terminal
+    print("\nIniciando programa :)...\n")
 
     processo = subprocess.Popen([
         sys.executable,
