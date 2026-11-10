@@ -1,8 +1,8 @@
-import subprocess # modulo nativo executa outros programas a partir do py
-import sys # modulo nativo fornece acesso a variáveis e funções específicas do interpretador py
-import threading # modulo nativo fornece suporte a threads (execução paralela de código)
-import time # modulo nativo fornece funções para manipulação de tempo e datas
-import os # modulo nativo fornece funções para interagir com o sistema operacional
+import subprocess # executa outros programas a partir do py
+import sys # fornece acesso a variáveis e funções específicas do interpretador py
+import threading # fornece suporte a threads (execução paralela de código)
+import time # fornece funções para manipulação de tempo e datas
+import os # fornece funções para interagir com o sistema operacional
 
 from watchdog.observers import Observer # modulo externo monitora alterações em arquivos e diretórios tipo nodemon
 from watchdog.events import FileSystemEventHandler # modulo externo manipula eventos de sistema de arquivos
@@ -30,7 +30,7 @@ def executar():
 
     processo = subprocess.Popen([
         sys.executable,
-        'main.py'  # inicia o script main.py em um novo processo
+        'main.py'  # script que será executado #! fazer ser selecionado no terminal dps se possivel
     ])
 
 
