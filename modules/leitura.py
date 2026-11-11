@@ -1,86 +1,95 @@
 import pandas as pd
-import pathlib as pl
-from modules import dicionario
-from modules import terminal
+from pathlib import Path
 
-# caminho dos arquivos
 
-BASE = pl.Path(__file__).resolve().parent.parent
-DATA = BASE / 'data'
+# ler arquivos
 
-ARQ_INSC = DATA / 'Conjunto de Dados - CE 26.xlsx'
-ARQ_ARRE = DATA / 'BASE_DADOS_CE_2025.xlsx'
+def ler_excel(caminho, planilha=0, colunas=None, **kwargs):
 
-def carregar_bases():
+    caminho = Path(caminho)
 
-    terminal.etapa('Carregando bases de dados...')
-
-    # inscricoes
-    colunas_inscricao = (
-        dicionario.INSCRICOES['str'] 
-        + dicionario.INSCRICOES['int']
+    dados = pd.read_excel(
+        caminho,
+        sheet_name=planilha,
+        usecols=colunas,
+        **kwargs
     )
 
-    # arrecadacao
-    colunas_arrecadacao = (
-        dicionario.ARRECADACAO['str']
-        + dicionario.ARRECADACAO['int']
+    return dados
+
+
+def ler_csv(
+    caminho,
+    colunas=None,
+    separador=',',
+    encoding='utf-8',
+    **kwargs
+):
+
+    caminho = Path(caminho)
+
+    dados = pd.read_csv(
+        caminho,
+        usecols=colunas,
+        sep=separador,
+        encoding=encoding,
+        **kwargs
     )
 
-    # ler planilhas
+    return dados
 
-    inscricoes = pd.read_excel(
-        ARQ_INSC,
-        sheet_name='Inscrições',
-        usecols=colunas_inscricao
-    )
-    arrecadacao = pd.read_excel(
-        ARQ_ARRE,
-        sheet_name='Arrecadações',
-        usecols=colunas_arrecadacao
-    )
 
-    terminal.sucesso('Bases carregadas com sucesso! :)')
+# tratar dados
 
-    # tratar quantidades
+def numericos(
+    dados,
+    colunas,
+    preencher_com=0,
+    tipo='int'
+):
 
-    for coluna in dicionario.INSCRICOES['int']:
-        inscricoes[coluna] = pd.to_numeric(
-            inscricoes[coluna],
+    dados = dados.copy()
+
+    for coluna in colunas:
+
+        dados[coluna] = pd.to_numeric(
+            dados[coluna],
             errors='coerce'
-            ).fillna(0).astype(int)
+        ).fillna(preencher_com)
 
-    for coluna in dicionario.ARRECADACAO['int']:
-        arrecadacao[coluna] = pd.to_numeric(
-            arrecadacao[coluna],
-            errors='coerce'
-            ).fillna(0).astype(int)
+        dados[coluna] = dados[coluna].astype(tipo)
 
-    # demanda por insticao
-    inscricoes['Total'] = (
-        inscricoes[dicionario.INSCRICOES['int']].sum(axis=1)
-        )
+    return dados
 
-    # arrecadacao por reg (cidade + orgao)
-    arrecadacao['Total'] = (
-    arrecadacao[dicionario.ARRECADACAO['int']].sum(axis=1)
-        )
+def texto_vazio(
+    dados,
+    colunas,
+    preencher_com='',
+    tipo='str'
+):
 
-    return inscricoes, arrecadacao
+    dados = dados.copy()
 
-def diagnostico(inscricoes, arrecadacao):
-    terminal.etapa('Diagnóstico das bases de dados:')
+    for coluna in colunas:
 
-    terminal.info('------------INSCRIÇÕES------------')
-    print(f'Registros: {len(inscricoes)}')
-    print(f'\nPré-Visualização:\n {inscricoes.head()}')
-    print(f'\nNulos:\n {inscricoes.isnull().sum()}') # TEM que retornar 0, caso contrario erro no tratamento
-    print(f'\nDescrição:\n {inscricoes.describe()}')
-    print(f'\n Colunas:\n {inscricoes.columns.tolist()}')
+        dados[coluna] = dados[coluna].fillna(preencher_com)
 
-    terminal.info('------------ARRECADAÇÃO------------')
-    print(f'Registros: {len(arrecadacao)}')
-    print(f'\nPré-Visualização:\n {arrecadacao.head()}')
-    print(f'\nNulos:\n {arrecadacao.isnull().sum()}') # TEM que retornar 0, caso contrario erro no tratamento
-    print(f'\nDescrição:\n {arrecadacao.describe()}')
-    print(f'\nColunas:\n {arrecadacao.columns.tolist()}')
+        dados[coluna] = dados[coluna].astype(tipo)
+
+    return dados
+
+def capitalize_text(
+    dados,
+    colunas
+):
+
+    dados = dados.copy()
+
+    for coluna in colunas:
+
+        dados[coluna] = dados[coluna].str.title()
+
+    return dados
+
+
+
