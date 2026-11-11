@@ -6,6 +6,7 @@ import os # fornece funções para interagir com o sistema operacional
 
 from watchdog.observers import Observer # modulo externo monitora alterações em arquivos e diretórios tipo nodemon
 from watchdog.events import FileSystemEventHandler # modulo externo manipula eventos de sistema de arquivos
+from modules import terminal
 
 processo = None # variável global para armazenar o processo em execução
 ultimo_evento = 0 # variável global para armazenar o timestamp do último evento de modificação
@@ -26,7 +27,7 @@ def executar():
 
     clear_console()
 
-    print("\nIniciando programa :)...\n")
+    terminal.info('Iniciando programa :) ...')
 
     processo = subprocess.Popen([
         sys.executable,
@@ -51,7 +52,7 @@ class ReloadHandler(FileSystemEventHandler): # classe que manipula eventos de si
             return
 
         ultimo_evento = agora
-        print("\nArquivo Alterado! Reiniciando...\n") #! ver dps pq nao esta aparecendo no terminal
+        terminal.sucesso('Arquivo Alterado! Reiniciando...')
         executar()
 
 
@@ -70,7 +71,7 @@ executar()
 try:
     threading.Event().wait() # aguarda indefinidamente até que o programa seja interrompido
 except KeyboardInterrupt:
-    print("\nPrograma interrompido D:\n")
+    terminal.erro('Programa interrompido D:\n')
     observer.stop() # para o observador quando o programa é interrompido
     if processo:
         processo.terminate()
