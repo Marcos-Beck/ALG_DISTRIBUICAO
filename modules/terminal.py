@@ -8,21 +8,19 @@ init(autoreset=True)
 # configuracoes visuais
 
 CORES = {
-    "INFO": Fore.CYAN,
-    "SUCCESS": Fore.GREEN,
-    "WARNING": Fore.YELLOW,
-    "ERROR": Fore.RED,
-    "DEBUG": Fore.MAGENTA,
-    "STEP": Fore.BLUE
+    'INFO': Fore.CYAN,
+    'TITULO': Fore.BLACK + Style.BRIGHT,
+    'SUCCESS': Fore.WHITE,
+    'STEP': Fore.YELLOW,
+    'ERROR': Fore.BLACK
 }
 
 FUNDOS = {
-    "INFO": Back.RESET,
-    "SUCCESS": Back.GREEN,
-    "WARNING": Back.YELLOW,
-    "ERROR": Back.RED,
-    "DEBUG": Back.MAGENTA,
-    "STEP": Back.BLUE
+    'INFO': Back.RESET,
+    'TITULO': Back.WHITE,
+    'SUCCESS': Back.GREEN,
+    'STEP': Back.RESET,
+    'ERROR': Back.RED
 }
 
 
@@ -31,41 +29,41 @@ FUNDOS = {
 def log(tipo, mensagem):
 
     horario = datetime.now().strftime("%H:%M:%S")
+
     cor = CORES.get(tipo, Fore.WHITE)
+    fundo = FUNDOS.get(tipo, Back.RESET)
 
     print(
-        f"{Fore.LIGHTBLACK_EX}[{horario}] "
-        f"{cor}[{tipo:^7}] "
-        f"{Style.RESET_ALL}{mensagem}"
+        f"{cor}{fundo}"
+        f"[{horario}] [{tipo:^7}] {mensagem}"
+        f"{Style.RESET_ALL}"
     )
 
 
 # atalhos
 
 def info(mensagem):
-    log("INFO", mensagem)
+    log('INFO', mensagem)
 
+def titulo(mensagem):
+    log('TITULO', mensagem)
 
 def sucesso(mensagem):
-    log("SUCCESS", mensagem)
+    log('SUCCESS', mensagem)
 
-
-def aviso(mensagem):
-    log("WARNING", mensagem)
-
+def etapa(mensagem):
+    log('STEP', mensagem)
 
 def erro(mensagem):
-    log("ERROR", mensagem)
+    log('ERROR', mensagem)
 
 
 # elementos vis
 
 def titulo(mensagem):
-
-    print()
-    print(Fore.CYAN + Style.BRIGHT + "=" * 55)
-    print(f" {mensagem.upper()}")
-    print("=" * 55)
+    print(Fore.CYAN + Style.BRIGHT + '=' * 55)
+    print(f'{mensagem.upper()}')
+    print('=' * 55)
 
 
 def separador():
@@ -77,6 +75,6 @@ def progresso(atual, total, mensagem):
     porcentagem = (atual / total) * 100 if total else 0
 
     log(
-        "INFO",
-        f"[{porcentagem:5.1f}%] {mensagem}"
+        'INFO',
+        f'[{porcentagem:5.1f}%] {mensagem}'
     )
