@@ -1,6 +1,7 @@
 import pandas as pd
 import pathlib as pl
-from modules import dicionario 
+from modules import dicionario
+from modules import terminal
 
 # caminho dos arquivos
 
@@ -12,7 +13,7 @@ ARQ_ARRE = DATA / 'BASE_DADOS_CE_2025.xlsx'
 
 def carregar_bases():
 
-    print('\nCarregando bases de dados...\n')
+    terminal.etapa('Carregando bases de dados...')
 
     # inscricoes
     colunas_inscricao = (
@@ -39,7 +40,7 @@ def carregar_bases():
         usecols=colunas_arrecadacao
     )
 
-    print('\nBases carregadas com sucesso! :)\n')
+    terminal.sucesso('Bases carregadas com sucesso! :)')
 
     # tratar quantidades
 
@@ -68,16 +69,16 @@ def carregar_bases():
     return inscricoes, arrecadacao
 
 def diagnostico(inscricoes, arrecadacao):
-    print('\nDiagnóstico das bases de dados:\n')
+    terminal.etapa('Diagnóstico das bases de dados:')
 
-    print('\n------------INSCRIÇÕES------------\n')
+    terminal.info('------------INSCRIÇÕES------------')
     print(f'Registros: {len(inscricoes)}')
     print(f'\nPré-Visualização:\n {inscricoes.head()}')
     print(f'\nNulos:\n {inscricoes.isnull().sum()}') # TEM que retornar 0, caso contrario erro no tratamento
     print(f'\nDescrição:\n {inscricoes.describe()}')
     print(f'\n Colunas:\n {inscricoes.columns.tolist()}')
 
-    print('\n------------ARRECADACAO------------\n')
+    terminal.info('------------ARRECADAÇÃO------------')
     print(f'Registros: {len(arrecadacao)}')
     print(f'\nPré-Visualização:\n {arrecadacao.head()}')
     print(f'\nNulos:\n {arrecadacao.isnull().sum()}') # TEM que retornar 0, caso contrario erro no tratamento
