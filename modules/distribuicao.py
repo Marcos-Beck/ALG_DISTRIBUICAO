@@ -1,19 +1,21 @@
 def distribuir_igualitario(instituicoes, estoque):
     """
     Distribui o estoque de forma igualitária progressiva.
+
+    Todas as instituições recebem uma parcela antes
+    de qualquer instituição receber complementação.
+
     Instituicoes: lista de dicionarios contendo:
         nome: identificação da instituição
         solicitado: quantidade solicitada
-        
-    estoque: quantidade disponivel para distribuicao.
+
+    estoque: quantidade disponível para distribuição.
     """
 
     resultado = []
 
-    # criar copia das inst com saldos 
-    for indice, instituicao in enumerate(instituicoes):
+    for instituicao in instituicoes:
         resultado.append({
-            'indice': indice,
             'nome': instituicao['nome'],
             'solicitado': instituicao['solicitado'],
             'atendido': 0
@@ -23,6 +25,7 @@ def distribuir_igualitario(instituicoes, estoque):
 
     # enquanto houver estoque e solicitacao pendente
     while estoque_restante > 0:
+
         # filtrar instituicoes com solicitacao pendente
         pendentes = [
             inst for inst in resultado
@@ -32,29 +35,23 @@ def distribuir_igualitario(instituicoes, estoque):
         if not pendentes:
             break  # todas as solicitacoes atendidas
 
-        # calcular quantidade a distribuir por instituicao
-        distribuicao = estoque_restante // len(pendentes)
+        # calcular parcela igualitaria para instituicoes pendentes
+        parcela = estoque_restante // len(pendentes)
 
-        if distribuicao == 0:
-            distribuicao = 1  # garantir que pelo menos 1 seja distribuido
+        # se não houver unidades suficientes para todos distribui uma unidade por vez seguindo a ordem recebida.
+        if parcela == 0:
+            parcela = 1
 
         for inst in pendentes:
+
             necessario = inst['solicitado'] - inst['atendido']
-            atender = min(distribuicao, necessario)
+            atender = min(parcela, necessario, estoque_restante)
 
             inst['atendido'] += atender
             estoque_restante -= atender
 
             if estoque_restante <= 0:
                 break
-
-        # distribuir sem ultrapassar a solicitacao
-        for inst in pendentes:
-            necessario = inst['solicitado'] - inst['atendido']
-            if necessario > 0 and estoque_restante > 0:
-                atender = min(necessario, estoque_restante)
-                inst['atendido'] += atender
-                estoque_restante -= atender
 
     return resultado, estoque_restante
 
@@ -291,28 +288,117 @@ def distribuir_faixa_etaria(
     }
 
 
-#! BLOCO DE TESTE RAPIDO
-instituicoes = [
-    {
-        'nome': 'Instituição A',
-        'solicitacao_fem': 50,
-        'solicitacao_masc': 30
-    },
-    {
-        'nome': 'Instituição B',
-        'solicitacao_fem': 20,
-        'solicitacao_masc': 40
+# #! BLOCO DE TESTE RAPIDO
+# instituicoes = [
+#     {
+#         'nome': 'Instituição A',
+#         'solicitacao_fem': 50,
+#         'solicitacao_masc': 30
+#     },
+#     {
+#         'nome': 'Instituição B',
+#         'solicitacao_fem': 20,
+#         'solicitacao_masc': 40
+#     }
+# ]
+
+# resultado = distribuir_faixa_etaria(
+#     instituicoes,
+#     estoque_fem=60,
+#     estoque_masc=50,
+#     estoque_uni=30
+# )
+
+# for item in resultado['instituicoes']:
+#     print(item)
+
+# print('Estoques restantes:', resultado['estoque_restante'])
+
+def distribuir_todas_faixas(instituicoes, estoques):
+    """
+    Distribui os estoques para todas as faixas etárias.
+    Executa distribuir_faixa_etaria() individualmente para cada faixa e reune os resultados.
+    """
+    resultado = []
+
+    # prepara o resultado de cada instituicao
+    for instituicao in instituicoes:
+        resultado.append({
+            'nome': instituicao['nome'],
+            'faixas': {}
+        })
+    estoque_restante = {}
+
+    # percorre todas as faixas 
+    for faixa, estoque in estoques.items():
+
+        # prepara as solicitacoes da faixa atual 
+        solicitacoes = [
+            {
+                'nome': indice,
+                'solicitacao_fem': instituicao['solicitado'][faixa]['feminino'],
+                'solicitacao_masc': instituicao['solicitado'][faixa]['masculino']
+            }
+            for indice, instituicao in enumerate(instituicoes)
+        ]
+
+        # executa a distribuicao 
+        distribuicao = distribuir_faixa_etaria(
+            solicitacoes,
+            estoque_fem=estoque['feminino'],
+            estoque_masc=estoque['masculino'],
+            estoque_uni=estoque['unissex']
+        )
+
+        # guarda o resultado de cada instituicao
+        for item in distribuicao['instituicoes']:
+            indice = item['nome']
+
+            dados_faixa = item.copy()
+            dados_faixa.pop('nome')
+
+            resultado[indice]['faixas'][faixa] = dados_faixa
+
+        # guarda o estoque restante da faixa
+        estoque_restante[faixa] = distribuicao['estoque_restante']
+
+    # calcula os totais de todas as faixas 
+    for instituicao in resultado:
+
+        faixas = instituicao['faixas']
+
+        instituicao['total_solicitado_fem'] = sum(
+            faixa['solicitacao_fem'] 
+            for faixa in faixas.values()
+        )
+
+        instituicao['total_solicitado_masc'] = sum(
+            faixa['solicitacao_masc']
+            for faixa in faixas.values()
+        )
+
+        instituicao['total_fem'] = sum(
+            faixa['total_fem']
+            for faixa in faixas.values()
+        )
+
+        instituicao['total_masc'] = sum(
+            faixa['total_masc']
+            for faixa in faixas.values()
+        )
+
+        instituicao['total_distribuido'] = (
+            instituicao['total_fem'] +
+            instituicao['total_masc']
+        )
+
+        instituicao['falta_total'] = sum(
+            item['falta_fem'] + item['falta_masc']
+            for item in faixas.values()
+        )
+
+    return {
+        'instituicoes': resultado,
+        'estoque_restante': estoque_restante
     }
-]
 
-resultado = distribuir_faixa_etaria(
-    instituicoes,
-    estoque_fem=60,
-    estoque_masc=50,
-    estoque_uni=30
-)
-
-for item in resultado['instituicoes']:
-    print(item)
-
-print('Estoques restantes:', resultado['estoque_restante'])
