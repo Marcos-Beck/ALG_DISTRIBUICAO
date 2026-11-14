@@ -232,6 +232,10 @@ def executar(arquivo,raiz):
 
         parar_processo()  # encerra o processo anterior
         limpar_terminal()  # limpa o terminal antes de iniciar o novo processo
+        
+        terminal.info(f'ARQUIVO SELECIONADO: {arquivo.name}')
+        terminal.info(f'DIRETORIO DO PROJETO: {raiz}')
+        terminal.info(f'MONITORAMENTO ATIVO')
 
         terminal.info(f'Executando: {arquivo.name}')
 
@@ -309,11 +313,12 @@ class ReloadHandler(FileSystemEventHandler):
     Manipulador de eventos para monitorar alterações em arquivos.
     '''
 
-    def __init__(self, raiz, padroes, arquivo, debounce):
+    def __init__(self, raiz, padroes, excessoes, arquivo, debounce):
         super().__init__()
 
         self.raiz = raiz
         self.padroes = padroes
+        self.excessoes = excessoes
         self.arquivo = arquivo
         self.debounce = debounce
 
@@ -338,10 +343,14 @@ class ReloadHandler(FileSystemEventHandler):
             if caminho.suffix.lower() != '.py':
                 continue  # ignora arquivos que nao sao .py
 
+            if caminho in self.excessoes:
+                continue  # ignora arquivos que estao na lista de excessoes
+
             if caminho_ignorado(
                 caminho,
                 self.raiz,
-                self.padroes
+                self.padroes,
+                self.excessoes
             ):
                 continue  # ignora arquivos que estao em pastas ignoradas ou que correspondem a padroes de ignorar
 
@@ -366,3 +375,128 @@ class ReloadHandler(FileSystemEventHandler):
         self.verificar_evento(event)
 
 # INICIALIZACAO
+
+def main():
+    '''
+    Funcao principal do script.
+    '''
+    parser = argparse.ArgumentParser(
+        description='Reinicia automaticamente um arquivo .py quando ele ou seus modulos forem alterados.'
+    )
+
+    parser.add_argument(
+        'arquivo',
+        nargs='?',
+        help='Arquivo Python que será executado'
+    )
+
+    parser.add_argument(
+            '-w', '--watch',
+            action='append',
+            default=[],
+            help='Diretório que será monitorado. Pode ser repetido.'
+    )
+
+    parser.add_argument(
+            '-i', '--ignore',
+            action='append',
+            default=[],
+            help='Arquivo ou padrão que deve ser ignorado.'
+    )
+    
+    parser.add_argument(
+            '--debounce',
+            type=float,
+            default=0.6,
+            help='Tempo de espera após a última alteração, em segundos.'
+    )
+
+    parser.add_argument(
+        '-u', '--unignore',
+        action='append',
+        default=[],
+        help='Arquivo ou pasta que deve voltar a ser monitorado.'
+    )
+
+    args = parser.parse_args()
+
+    raiz = Path.cwd().resolve()    
+
+    try:
+
+        arquivo = selecionar_arquivo(
+            raiz, 
+            args.arquivo
+        )
+
+    except (FileNotFoundError, ValueError) as erro:
+
+        terminal.erro(str(erro))
+        return
+
+    # define os diretorios monitorados
+    diretorios = args.watch if args.watch else ['.']
+
+    observer = Observer()
+
+    handler = ReloadHandler(
+        raiz=raiz,
+        padroes=args.ignore,
+        excessoes=args.unignore,
+        arquivo=arquivo,
+        debounce=max(0.1, args.debounce)  # garante que o debounce seja pelo menos 0.1 segundos
+    )
+
+    for diretorio in diretorios:
+
+        caminho = Path(diretorio)
+
+        if not caminho.is_absolute():
+            caminho = raiz / caminho
+
+        caminho = caminho.resolve()
+        
+        if not caminho.is_dir():
+            terminal.erro(
+                f'Diretório de monitoramento inválido: {caminho}'
+            )
+            return
+        
+        observer.schedule(
+            handler,
+            path=str(caminho),
+            recursive=True
+        )
+
+    try:
+
+        observer.start()  # inicia o monitoramento
+
+        executar(arquivo, raiz)  # executa o arquivo selecionado
+
+        while True:
+            time.sleep(1)  # mantém o script rodando
+
+    except KeyboardInterrupt:
+
+        terminal.erro('Programa interrompido pelo usuário. Encerrando...')
+
+    finally:
+
+        encerrando.set()
+
+        with bloqueio_timer:
+
+            if timer_reinicio is not None:
+                timer_reinicio.cancel()  # cancela o temporizador se estiver ativo
+
+        observer.stop()  # para o monitoramento
+        observer.join()  # aguarda o monitoramento encerrar
+
+        with bloqueio_processo:
+            
+            parar_processo()  # encerra o processo se estiver ativo
+            terminal.sucesso('Encerrado com sucesso.')
+
+if __name__ == '__main__':
+    main()
