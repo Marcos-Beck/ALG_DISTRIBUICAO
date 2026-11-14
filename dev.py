@@ -1,80 +1,194 @@
-import subprocess # executa outros programas a partir do py
-import sys # fornece acesso a variáveis e funções específicas do interpretador py
-import threading # fornece suporte a threads (execução paralela de código)
-import time # fornece funções para manipulação de tempo e datas
-import os # fornece funções para interagir com o sistema operacional
+import argparse # recebe configuracoes e parametros pelo terminal
+import fnmatch # compara nomes de arquivos com padroes
+import os 
+import sys # obtem informacoes do py que esta rodando
+import subprocess 
+import threading # executa funcoes em paralelo
+import time
+from pathlib import Path
 
-from watchdog.observers import Observer # modulo externo monitora alterações em arquivos e diretórios tipo nodemon
-from watchdog.events import FileSystemEventHandler # modulo externo manipula eventos de sistema de arquivos
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
 from modules import terminal
 
-processo = None # variável global para armazenar o processo em execução
-ultimo_evento = 0 # variável global para armazenar o timestamp do último evento de modificação
+# configuracoes
 
-def clear_console(): # função para limpar o console
-    if os.name == 'nt': 
-        os.system('cls')
-    else: 
-        os.system('clear')
+PASTAS_IGNORADAS = {
+    '.git',
+    '__pycache__',
+    '.venv',
+    'env',
+    'venv',
+    'build',
+    'dist',
+    '.pytest_cache'
+}
 
+processo = None # armazenar o processo do py que esta rodando
 
-def executar():
-    global processo
+bloqueio_processo = threading.Lock() # impede que o processo seja reiniciado enquanto ele esta rodando
 
-    if processo:
-        processo.terminate() # termina o processo em execução
-        processo.wait() # aguarda o término do processo
+timer_reinicio = None # temporizador para guardar o tempo de espera antes de reiniciar o processo
 
-    clear_console()
+encerrando = threading.Event() # sinaliza que o processo esta sendo encerrado
 
-    terminal.info('Iniciando programa :) ...')
+# FUNCOES AUX 
 
-    processo = subprocess.Popen([
-        sys.executable,
-        'main.py'  # script que será executado #! fazer ser selecionado no terminal dps se possivel
-    ])
+def limpar_terminal():
+    '''
+    Limpa o terminal.
+    '''
+    os.system('cls' if os.name == 'nt' else 'clear') # funciona no win, linux e mac :D
 
+def caminho_ignorado(caminho, raiz, padroes, excecoes=None):
+    '''
+    Verifica se o caminho deve ser ignorado.
+    '''
+    caminho = Path(caminho)
+    excecoes = excecoes or []
 
-class ReloadHandler(FileSystemEventHandler): # classe que manipula eventos de sistema de arquivos
+    try:
+        relativo = caminho.resolve().relative_to(raiz.resolve()).as_posix()
+    except ValueError:
+        relativo = caminho.resolve().as_posix()
 
-    def on_modified(self, event):
-        global ultimo_evento
+    partes = Path(relativo).parts
+    nome = caminho.name.lower()
+    relativo = relativo.lower()
 
-        if event.is_directory: # ignora eventos de diretório
-            return
+    # 1 verifica excecoes (tem prioridade sobre regras de ignorar)
+    for padrao in excecoes:
 
-        if not event.src_path.endswith('.py'): # ignora eventos de arquivos que não são .py
-            return
+        padrao = padrao.lower()
 
-        agora = time.time() # evita múltiplos eventos repetidos em sequência
+        if (
+            fnmatch.fnmatch(relativo, padrao)
+            or fnmatch.fnmatch(nome, padrao)
+            or any(
+                fnmatch.fnmatch(parte.lower(), padrao)
+                for parte in partes
+            )
+        ):
+            return False
 
-        if agora - ultimo_evento < 1: # se o tempo desde o último evento for menor que 1 segundo, ignora
-            return
+    # 2 ignora pastas padrao
+    if any(
+        parte.lower() in PASTAS_IGNORADAS
+        for parte in partes
+    ):
+        return True
 
-        ultimo_evento = agora
-        terminal.sucesso('Arquivo Alterado! Reiniciando...')
-        executar()
+    # 3 verifica padroes adc de ignorar
+    for padrao in padroes:
 
+        padrao = padrao.lower()
 
-observer = Observer() # cria um observador para monitorar alterações em arquivos e diretórios
+        if (
+            fnmatch.fnmatch(relativo, padrao)
+            or fnmatch.fnmatch(nome, padrao)
+            or any(
+                fnmatch.fnmatch(parte.lower(), padrao)
+                for parte in partes
+            )
+        ):
+            return True
 
-observer.schedule(
-    ReloadHandler(),
-    path='.',
-    recursive=True
-    ) # agenda o observador para monitorar alterações no diretório atual e em subdiretórios
+    return False
 
-observer.start() 
+# SELECAO DO ARQUIVO
 
-executar()
+def listar_arquivos(raiz):
+    '''
+    Lista todos os arquivos .py na raiz e subpastas, ignorando pastas e arquivos especificados.
+    '''
+    arquivos = []
 
-try:
-    threading.Event().wait() # aguarda indefinidamente até que o programa seja interrompido
-except KeyboardInterrupt:
-    terminal.erro('Programa interrompido D:\n')
-    observer.stop() # para o observador quando o programa é interrompido
-    if processo:
-        processo.terminate()
-        processo.wait() # aguarda o término do processo em execução
+    for pasta, subpastas, nomes in os.walk(raiz):
 
-    
+        # evita entrar em pastas ignoradas
+        subpastas[:] = [
+            nome for nome in subpastas
+            if nome.lower() not in PASTAS_IGNORADAS
+        ]
+
+        for nome in nomes:
+
+            if nome.lower().endswith('.py'):
+                arquivos.append(Path(pasta) / nome)
+
+    return sorted(arquivos)
+
+def selecionar_arquivo(raiz, informado=None):
+    '''
+    Seleciona o arquivo .py a ser executado.
+    '''
+    # caso informado pelo comando
+    if informado:
+
+        arquivo = Path(informado)
+
+        if not arquivo.is_absolute():
+            arquivo = raiz / arquivo
+
+        arquivo = arquivo.resolve()
+
+    else:
+
+        arquivos = listar_arquivos(raiz)
+
+        if not arquivos:
+            raise FileNotFoundError(
+                terminal.erro('Nenhum arquivo .py encontrado na raiz e subpastas.')
+                )
+        terminal.etapa('Arquivos disponíveis:')
+
+        for indice, arquivo in enumerate(arquivos, start=1):
+
+            try: 
+                nome = arquivo.relative_to(raiz)
+            except ValueError:
+                nome = arquivo
+
+            terminal.info(f'[{indice}] {nome}')
+
+        while True:
+
+            escolha = input('\nSelecione o arquivo: ').strip()
+
+            if escolha.isdigit():
+                indice = int(escolha) - 1
+
+                if 0 <= indice < len(arquivos):
+                    arquivo = arquivos[indice]
+                    break
+
+                terminal.erro('Opção inválida.')
+
+            else:
+
+                arquivo = Path(escolha.strip('"').strip("'"))
+
+                if not arquivo.is_absolute():
+                    arquivo = raiz / arquivo
+
+                arquivo = arquivo.resolve()
+
+                if arquivo.is_file():
+                    break
+
+                terminal.erro('Arquivo não encontrado.')
+
+    if not arquivo.exists():
+        raise FileNotFoundError(
+            terminal.erro(f'Arquivo não encontrado: {arquivo}')
+        )
+
+    if arquivo.suffix.lower() != '.py':
+        raise ValueError(
+            terminal.erro(f'Arquivo selecionado não é um arquivo .py: {arquivo}')
+        )
+    return arquivo
+
+# EXECUCAO
+
