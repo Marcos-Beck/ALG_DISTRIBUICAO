@@ -192,3 +192,71 @@ def selecionar_arquivo(raiz, informado=None):
 
 # EXECUCAO
 
+def parar_processo():
+    '''
+    Encerra o processo anterior com segurança.
+    '''
+    global processo
+
+    if processo is None:
+        return
+
+    if processo.poll() is None:  # processo ainda esta rodando
+
+        terminal.info('Encerrando processo anterior...')
+
+        processo.terminate()  # envia sinal de terminacao
+
+        try:
+            processo.wait(timeout=5)  # espera o processo encerrar
+
+        except subprocess.TimeoutExpired:
+            terminal.info('Processo não encerrou, forçando encerramento...')
+            processo.kill()  # força o encerramento
+            processo.wait()  # espera o processo encerrar
+
+    processo = None  # reseta o processo para None
+
+def executar(arquivo,raiz):
+    '''
+    Executa ou reinicia o arquivo selecionado.
+    '''
+    global processo
+
+    with bloqueio_processo:  # garante que apenas um processo seja iniciado por vez
+
+        if encerrando.is_set():
+            return  # se o processo esta sendo encerrado nao inicia outro
+
+        parar_processo()  # encerra o processo anterior
+        limpar_terminal()  # limpa o terminal antes de iniciar o novo processo
+
+        terminal.info(f'Executando: {arquivo.name}')
+
+        # inclui a raiz do projeto no caminho de importacao para facilitar imports de modulos em subpastas
+        ambiente = os.environ.copy()
+
+        pythonpath_atual = ambiente.get('PYTHONPATH', '')
+
+        ambiente['PYTHONPATH'] = (
+            str(raiz) 
+            + (os.pathsep + pythonpath_atual if pythonpath_atual else '')
+        )
+
+        try:
+
+            processo = subprocess.Popen(
+                [
+                    sys.executable,  # caminho do interpretador python que esta rodando este script
+                    str(arquivo)  # caminho do arquivo .py a ser executado
+                ],
+                cwd=str(raiz),  # define a raiz do projeto como diretorio de trabalho
+                env=ambiente,  # define o ambiente com a raiz do projeto no PYTHON
+            )
+
+        except OSError as erro:
+
+            processo = None 
+            terminal.erro(f'Falha ao executar o processo: {erro}')
+
+# CONTROLE DE REINICIO 
