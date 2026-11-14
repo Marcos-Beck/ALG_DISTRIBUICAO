@@ -29,6 +29,8 @@ processo = None # armazenar o processo do py que esta rodando
 
 bloqueio_processo = threading.Lock() # impede que o processo seja reiniciado enquanto ele esta rodando
 
+bloqueio_timer = threading.Lock() # impede que o temporizador seja reiniciado enquanto ele esta rodando
+
 timer_reinicio = None # temporizador para guardar o tempo de espera antes de reiniciar o processo
 
 encerrando = threading.Event() # sinaliza que o processo esta sendo encerrado
@@ -260,3 +262,45 @@ def executar(arquivo,raiz):
             terminal.erro(f'Falha ao executar o processo: {erro}')
 
 # CONTROLE DE REINICIO 
+
+def agendar_reinicio(arquivo, raiz, debounce):
+    '''
+    Aguarda um tempo após a última modificação, evita multiplos reinicios
+    '''
+
+    global timer_reinicio
+
+    with bloqueio_timer:  # garante que apenas um temporizador seja iniciado por vez
+
+        if encerrando.is_set():
+            return  # se o processo esta sendo encerrado nao agenda reinicio
+
+        if timer_reinicio is not None:
+            timer_reinicio.cancel()  # cancela o temporizador anterior
+
+        timer_reinicio = threading.Timer(
+            debounce, 
+            executar, 
+            args=(arquivo, raiz)
+            )
+
+        timer_reinicio.daemon = True  # garante que o temporizador nao bloqueie a finalizacao do script
+        timer_reinicio.start()  # inicia o temporizador
+
+def reiniciar(arquivo,raiz):
+    '''
+    Executa novamente o arquivo selecionado
+    '''
+    global timer_reinicio
+
+    with bloqueio_timer:  # garante que apenas um temporizador seja iniciado por vez
+
+        if encerrando.is_set():
+            return  # se o processo esta sendo encerrado nao reinicia
+
+        terminal.sucesso('Arquivo alterado! Reiniciando...')
+
+        executar(arquivo, raiz)  # reinicia o processo imediatamente
+
+# MONITORAMENTO 
+        
