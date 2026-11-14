@@ -303,4 +303,66 @@ def reiniciar(arquivo,raiz):
         executar(arquivo, raiz)  # reinicia o processo imediatamente
 
 # MONITORAMENTO 
-        
+
+class ReloadHandler(FileSystemEventHandler):
+    '''
+    Manipulador de eventos para monitorar alterações em arquivos.
+    '''
+
+    def __init__(self, raiz, padroes, arquivo, debounce):
+        super().__init__()
+
+        self.raiz = raiz
+        self.padroes = padroes
+        self.arquivo = arquivo
+        self.debounce = debounce
+
+    def verificar_evento(self, event):
+        '''
+        Verifica se o evento é relevante para o reload.
+        '''
+        if event.is_directory:
+            return  # ignora eventos de diretório
+
+        caminhos = [event.src_path]
+
+        # considera tambem o destino em alteracoes de renomear
+
+        if hasattr(event, 'dest_path'):
+            caminhos.append(event.dest_path)
+
+        for caminho in caminhos:
+
+            caminho = Path(caminho)
+
+            if caminho.suffix.lower() != '.py':
+                continue  # ignora arquivos que nao sao .py
+
+            if caminho_ignorado(
+                caminho,
+                self.raiz,
+                self.padroes
+            ):
+                continue  # ignora arquivos que estao em pastas ignoradas ou que correspondem a padroes de ignorar
+
+            agendar_reinicio(
+                self.arquivo,
+                self.raiz,
+                self.debounce
+            )
+
+            return
+
+    def on_modified(self, event):
+        self.verificar_evento(event)
+
+    def on_created(self, event):
+        self.verificar_evento(event)
+
+    def on_moved(self, event):
+        self.verificar_evento(event)
+
+    def on_deleted(self, event):
+        self.verificar_evento(event)
+
+# INICIALIZACAO
