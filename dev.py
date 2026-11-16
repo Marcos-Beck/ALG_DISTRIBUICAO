@@ -479,7 +479,7 @@ def main():
 
     except KeyboardInterrupt:
 
-        terminal.erro('Programa interrompido pelo usuário. Encerrando...')
+        terminal.info('Programa interrompido pelo usuário. Encerrando...')
 
     finally:
 
