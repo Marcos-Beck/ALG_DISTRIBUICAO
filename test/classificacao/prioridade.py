@@ -3,7 +3,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..','..')))
 
-from modules import leitura, classificacao, terminal
+from modules import leitura, classificacao, distribuicao, terminal
 
 from config.caixa_encantada import fontes, categorias, regras
 from config.caixa_encantada import config as campanha
@@ -103,31 +103,40 @@ try:
                     grupo.copy()
                 )
 
-    # ETAPA 7 - RESUMO
+    # ETAPA 7 - PREPARAR GRUPOS PARA DISTRIBUIÇÃO
 
-    for regiao, localidades in grupos_geograficos.items():
+    terminal.etapa('PREPARANDO GRUPOS DE DISTRIBUIÇÃO...')
 
-        print(f'\n========== REGIÃO: {regiao} ==========')
+    grupos_distribuicao = distribuicao.preparar_grupos_distribuicao(
+        grupos_geograficos=grupos_geograficos,
+        categorias=categorias.CATEGORIAS
+    )
 
-        for localidade, prioridades in localidades.items():
+    # ETAPA 8 - RESUMO
 
-            print(f'\n--- {localidade.upper()} ---')
+    for prioridade, instituicoes in grupos_distribuicao.items():
 
-            for prioridade, instituicoes in prioridades.items():
+        total_solicitado = sum(
+            sum(
+                faixa[genero]
+                for faixa in instituicao['solicitado'].values()
+                for genero in ['feminino', 'masculino']
+            )
+            for instituicao in instituicoes
+        )
 
-                print(
-                    f'\nPRIORIDADE P{prioridade} '
-                    f'({len(instituicoes)} instituições)'
-                )
+        terminal.info(
+            f'P{prioridade}: {len(instituicoes)} instituições'
+        )
 
-                print(
-                    instituicoes[
-                        ['Beneficiario', 'Cidade',
-                         'Solicitação Total', 'Prioridade']
-                    ].to_string(index=False)
-                )
+        terminal.info(
+            f'Total solicitado: {total_solicitado} brinquedos'
+        )
 
-    terminal.sucesso('INTEGRAÇÃO CONCLUÍDA!')
+        for instituicao in instituicoes[:3]:
+            print(instituicao)
+
+    terminal.sucesso('PREPARAÇÃO CONCLUÍDA!')
 
 except Exception as erro:
     terminal.erro(f'Falha no teste: {erro}')
