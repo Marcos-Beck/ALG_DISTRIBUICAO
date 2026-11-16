@@ -112,31 +112,42 @@ try:
         categorias=categorias.CATEGORIAS
     )
 
-    # ETAPA 8 - RESUMO
 
-    for prioridade, instituicoes in grupos_distribuicao.items():
+    # ETAPA 9 - CALCULAR DEMANDA REGIONAL
 
-        total_solicitado = sum(
-            sum(
-                faixa[genero]
-                for faixa in instituicao['solicitado'].values()
-                for genero in ['feminino', 'masculino']
-            )
-            for instituicao in instituicoes
-        )
+    terminal.etapa('CALCULANDO DEMANDA REGIONAL...')
+
+    demanda_regional = distribuicao.calcular_demanda_regional(
+        grupos_distribuicao=grupos_distribuicao,
+        categorias=categorias.CATEGORIAS
+    )
+
+    for prioridade, regioes in demanda_regional.items():
+
+        total_prioridade = 0
+
+        print(f'\n========== DEMANDA P{prioridade} ==========')
+
+        for regiao, localidades in regioes.items():
+
+            for localidade, faixas in localidades.items():
+
+                total = sum(
+                    valores['feminino'] + valores['masculino']
+                    for valores in faixas.values()
+                ) # consolida a demanda por faixa etaria e genero
+
+                total_prioridade += total
+
+                print(
+                    f'{regiao} / {localidade}: {total} brinquedos'
+                )
 
         terminal.info(
-            f'P{prioridade}: {len(instituicoes)} instituições'
+            f'Total P{prioridade}: {total_prioridade} brinquedos'
         )
 
-        terminal.info(
-            f'Total solicitado: {total_solicitado} brinquedos'
-        )
-
-        for instituicao in instituicoes[:3]:
-            print(instituicao)
-
-    terminal.sucesso('PREPARAÇÃO CONCLUÍDA!')
+    terminal.sucesso('DEMANDA REGIONAL CALCULADA ;D')
 
 except Exception as erro:
     terminal.erro(f'Falha no teste: {erro}')
