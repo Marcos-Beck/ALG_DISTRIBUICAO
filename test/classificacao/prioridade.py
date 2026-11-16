@@ -77,28 +77,57 @@ try:
             classificacao.organizar_por_regiao(instituicoes)
         )
 
-    # ETAPA 6 - RESUMO
-    for prioridade, regioes_grupo in grupos_completos.items():
+    # ETAPA 6 - SEPARAR CAPITAL E INTERIOR
 
-        print(f'\n========== PRIORIDADE P{prioridade} ==========')
+    terminal.etapa('SEPARANDO CAPITAL E INTERIOR...')
+
+    grupos_geograficos = {}
+
+    for prioridade, regioes_grupo in grupos_completos.items():
 
         for regiao, instituicoes in regioes_grupo.items():
 
-            print(f'\nREGIÃO: {regiao}')
+            grupos_geograficos.setdefault(regiao, {})
 
-            print(
-                instituicoes[
-                    ['Beneficiario', 'Cidade', 'Solicitação Total',
-                     'Prioridade', 'Localidade']
-                ].to_string(index=False)
-            )
+            for localidade, grupo in instituicoes.groupby(
+                'Localidade',
+                sort=False
+            ):
 
-            terminal.info(
-                f'{len(instituicoes)} instituições'
-            )
+                grupos_geograficos[regiao].setdefault(
+                    localidade,
+                    {}
+                )
+
+                grupos_geograficos[regiao][localidade][prioridade] = (
+                    grupo.copy()
+                )
+
+    # ETAPA 7 - RESUMO
+
+    for regiao, localidades in grupos_geograficos.items():
+
+        print(f'\n========== REGIÃO: {regiao} ==========')
+
+        for localidade, prioridades in localidades.items():
+
+            print(f'\n--- {localidade.upper()} ---')
+
+            for prioridade, instituicoes in prioridades.items():
+
+                print(
+                    f'\nPRIORIDADE P{prioridade} '
+                    f'({len(instituicoes)} instituições)'
+                )
+
+                print(
+                    instituicoes[
+                        ['Beneficiario', 'Cidade',
+                         'Solicitação Total', 'Prioridade']
+                    ].to_string(index=False)
+                )
 
     terminal.sucesso('INTEGRAÇÃO CONCLUÍDA!')
 
-except Exception as e:
-
-    terminal.erro(f'Falha no teste: {e}')
+except Exception as erro:
+    terminal.erro(f'Falha no teste: {erro}')
