@@ -128,6 +128,54 @@ def preparar_grupos_distribuicao(
     return grupos
 
 
+def calcular_demanda_regional(
+    grupos_distribuicao,
+    categorias
+):
+    """
+    Calcula a demanda por prioridade, região, localidade
+    e faixa etária, separando feminino e masculino.
+
+    Não altera instituições nem estoques.
+    """
+
+    demanda = {}
+
+    for prioridade, instituicoes in grupos_distribuicao.items():
+
+        demanda[prioridade] = {}
+
+        for instituicao in instituicoes:
+
+            regiao = instituicao['regiao']
+            localidade = instituicao['localidade']
+
+            demanda[prioridade].setdefault(regiao, {})
+            demanda[prioridade][regiao].setdefault(
+                localidade,
+                {}
+            )
+
+            for faixa in categorias:
+
+                grupo = demanda[prioridade][regiao][localidade]
+
+                grupo.setdefault(
+                    faixa,
+                    {
+                        'feminino': 0,
+                        'masculino': 0
+                    }
+                )
+
+                solicitado = instituicao['solicitado'][faixa]
+
+                grupo[faixa]['feminino'] += solicitado['feminino']
+                grupo[faixa]['masculino'] += solicitado['masculino']
+
+    return demanda
+
+
 def estruturar_estoque(
         arrecadacao,
         categorias,
