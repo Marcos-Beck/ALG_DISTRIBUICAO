@@ -52,6 +52,82 @@ def preparar_instituicoes(
     return instituicoes
 
 
+def preparar_grupos_distribuicao(
+    grupos_geograficos,
+    categorias,
+    coluna_ordem='Ordem Inscrição',
+    coluna_cnpj_valido='CNPJ Válido'
+):
+    """
+    Reúne instituições de todas as regiões por prioridade,
+    preservando região, localidade e ordem de classificação.
+    """
+
+    grupos = {}
+    sequencia = 0
+
+    for regiao, localidades in grupos_geograficos.items():
+
+        for localidade, prioridades in localidades.items():
+
+            for prioridade, dados in prioridades.items():
+
+                preparados = preparar_instituicoes(
+                    dados=dados,
+                    categorias=categorias
+                )
+
+                for (_, linha), instituicao in zip(
+                    dados.iterrows(),
+                    preparados
+                ):
+
+                    instituicao['regiao'] = regiao
+                    instituicao['localidade'] = localidade
+                    instituicao['prioridade'] = prioridade
+
+                    # ´preserva criterios de classificacao
+                    ordem = linha.get(coluna_ordem, None)
+                    cnpj_valido = linha.get(
+                        coluna_cnpj_valido,
+                        False
+                    )
+
+                    instituicao['ordem_inscricao'] = ordem
+
+                    instituicao['cnpj_valido'] = (
+                        bool(cnpj_valido)
+                        if pd.notna(cnpj_valido)
+                        else False
+                    ) # garante que seja bool mesmo se vier como string
+
+                    instituicao['_sequencia'] = sequencia
+                    sequencia += 1
+
+                    grupos.setdefault(prioridade, [])
+                    grupos[prioridade].append(instituicao)
+
+    # reorganizar prioridade respeitando a classificacao original
+    for prioridade, instituicoes in grupos.items():
+
+        instituicoes.sort(
+            key=lambda item: (
+                (
+                    float('inf')
+                    if pd.isna(item['ordem_inscricao'])
+                    else item['ordem_inscricao']
+                ),
+                not item['cnpj_valido'],
+                item['_sequencia']
+            ) # ordem de classificacao: ordem_inscricao, cnpj_valido, sequencia
+        )
+
+        for instituicao in instituicoes:
+            instituicao.pop('_sequencia')
+
+    return grupos
+
+
 def estruturar_estoque(
         arrecadacao,
         categorias,
