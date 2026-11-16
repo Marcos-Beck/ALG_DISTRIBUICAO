@@ -1,3 +1,161 @@
+import pandas as pd
+
+def preparar_instituicoes(
+    dados,
+    categorias,
+    coluna_beneficiario='Beneficiario'
+):
+    """
+    Converte o DataFrame de instituições para a estrutura
+    utilizada pelas funções de distribuição.
+    """
+
+    # Validar coluna de identificação
+    if coluna_beneficiario not in dados.columns:
+        raise ValueError(
+            f'Coluna não encontrada: {coluna_beneficiario}'
+        )
+
+    instituicoes = []
+
+    for _, linha in dados.iterrows():
+
+        instituicao = {
+            'nome': linha[coluna_beneficiario],
+            'solicitado': {}
+        }
+
+        for faixa, generos in categorias.items(): # percorre todas as faixas e generos
+
+            instituicao['solicitado'][faixa] = {}
+
+            for genero in ['feminino', 'masculino']:
+
+                coluna = generos[genero]['demanda'] # pega a coluna de demanda correspondente
+
+                if coluna not in dados.columns:
+                    raise ValueError(
+                        f'Coluna de solicitação não encontrada: {coluna}'
+                    )
+
+                valor = pd.to_numeric(  # garantir que o valor seja numm
+                    linha[coluna],
+                    errors='raise'
+                )
+
+                instituicao['solicitado'][faixa][genero] = (
+                    int(valor) if pd.notna(valor) else 0
+                )
+
+        instituicoes.append(instituicao)
+
+    return instituicoes
+
+
+def estruturar_estoque(
+        arrecadacao,
+        categorias,
+        coluna_regiao='Região',
+        coluna_localidade='Localidade',
+):
+    """
+    Estrutura os estoques por região, localidade, faixa etária e gênero.
+
+    Retorna:
+        {
+            'Região': {
+                'interior': {
+                    '0-3': {
+                        'feminino': 100,
+                        'masculino': 80,
+                        'unissex': 50
+                    }
+                }
+            }
+        }
+    """
+
+    # 1 validar colunas geograficas
+    colunas_geograficas = [coluna_regiao, coluna_localidade]
+
+    for coluna in colunas_geograficas:
+        if coluna not in arrecadacao.columns:
+            raise ValueError(
+                f'Coluna obrigatória "{coluna}" não encontrada.'
+                )
+
+        if arrecadacao[coluna].isna().any():
+            raise ValueError(
+                f'Coluna obrigatória "{coluna}" contém valores nulos.'
+                )
+
+    # 2 identificar colunas estoque
+    colunas_estoque = []
+
+    for faixa, generos in categorias.items():
+        for genero in ['feminino', 'masculino']:
+            coluna = generos[genero]['estoque']
+            colunas_estoque.append(coluna)
+
+        coluna_uni = generos['unissex']
+        colunas_estoque.append(coluna_uni)
+
+    # remover duplicacoes
+    colunas_estoque = list(dict.fromkeys(colunas_estoque))
+
+    # 3 validar colunas estoque
+    for coluna in colunas_estoque:
+        if coluna not in arrecadacao.columns:
+            raise ValueError(
+                f'Coluna de estoque não encontrada: {coluna}'
+            )
+
+    # 4 criar copia p/ nao modificar a base og
+    dados = arrecadacao.copy()
+
+    # garantir num
+    for coluna in colunas_estoque:
+        try:
+            dados[coluna] = pd.to_numeric(
+                dados[coluna],
+                errors='raise'
+            ).fillna(0)
+        except (ValueError, TypeError):
+            raise ValueError(
+                f'Valores inválidos encontrados na coluna: {coluna}'
+            )
+
+    # 5 agrupar por região e localidade
+    agrupados = dados.groupby(
+        [coluna_regiao, coluna_localidade],
+        sort=False
+    )[colunas_estoque].sum()
+
+    # 6 montar estrutura final
+    estoques = {}
+
+    for (regiao, localidade), valores in agrupados.iterrows():
+
+        estoques.setdefault(regiao, {})
+        estoques[regiao].setdefault(localidade, {})
+
+        for faixa, generos in categorias.items():
+
+            estoques[regiao][localidade][faixa] = {
+                'feminino': int(
+                    valores[generos['feminino']['estoque']]
+                ),
+                'masculino': int(
+                    valores[generos['masculino']['estoque']]
+                ),
+                'unissex': int(
+                    valores[generos['unissex']]
+                )
+            }
+
+    return estoques
+
+
 def distribuir_igualitario(instituicoes, estoque):
     """
     Distribui o estoque de forma igualitária progressiva.
