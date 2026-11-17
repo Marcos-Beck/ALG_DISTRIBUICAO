@@ -786,3 +786,65 @@ def comparar_solicitado_estoque(demanda_regional, estoques_regionais):
 
     return resultado
 
+
+def resumir_demanda_estoque(demanda_regional, estoques_regionais):
+    """
+    Consolida a demanda por prioridade e o estoque total disponível,
+    agrupando os valores por faixa etária e gênero.
+
+    Retorna um dicionário com a demanda de cada prioridade e o
+    estoque feminino, masculino e unissex disponível no estado.
+    """
+
+    resumo = {
+        'demanda': {},
+        'estoque': {}
+    }
+
+    # Consolidar demanda por prioridade
+    for prioridade, regioes in demanda_regional.items():
+
+        resumo['demanda'][prioridade] = {}
+
+        for localidades in regioes.values():
+
+            for faixas in localidades.values():
+
+                for faixa, generos in faixas.items():
+
+                    resumo['demanda'][prioridade].setdefault(
+                        faixa,
+                        {'feminino': 0, 'masculino': 0}
+                    )
+
+                    resumo['demanda'][prioridade][faixa]['feminino'] += (
+                        generos['feminino']
+                    )
+
+                    resumo['demanda'][prioridade][faixa]['masculino'] += (
+                        generos['masculino']
+                    )
+
+    # Consolidar estoque de todas as regiões
+    for localidades in estoques_regionais.values():
+
+        for faixas in localidades.values():
+
+            for faixa, generos in faixas.items():
+
+                resumo['estoque'].setdefault(
+                    faixa,
+                    {
+                        'feminino': 0,
+                        'masculino': 0,
+                        'unissex': 0
+                    }
+                )
+
+                for genero in ['feminino', 'masculino', 'unissex']:
+
+                    resumo['estoque'][faixa][genero] += generos[genero]
+
+    return resumo
+
+
