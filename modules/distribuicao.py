@@ -685,6 +685,152 @@ def distribuir_todas_faixas(instituicoes, estoques):
     }
 
 
+def distribuir_todas_prioridades(grupos_distribuicao, estoques, categorias):
+    """
+    Executa a distribuição de todas as prioridades em sequência
+    e retorna um DataFrame consolidado com os resultados.
+    """
+
+    # Ordena as prioridades numericamente
+    prioridades = sorted(
+        grupos_distribuicao,
+        key=lambda prioridade: int(
+            ''.join(
+                caractere
+                for caractere in str(prioridade)
+                if caractere.isdigit()
+            )
+        )
+    )
+
+    estoque_atual = {
+        faixa: valores.copy()
+        for faixa, valores in estoques.items()
+    }
+
+    registros = []
+    resultados_prioridade = {}
+
+    for prioridade in prioridades:
+
+        instituicoes_originais = grupos_distribuicao[prioridade]
+
+        # Executa a distribuição da prioridade atual
+        resultado = distribuir_todas_faixas(
+            instituicoes=instituicoes_originais,
+            estoques=estoque_atual
+        )
+
+        resultados_prioridade[prioridade] = resultado
+
+        # Atualiza o estoque para a próxima prioridade
+        estoque_atual = resultado['estoque_restante']
+
+        instituicoes_distribuidas = resultado['instituicoes']
+
+        if len(instituicoes_originais) != len(instituicoes_distribuidas):
+            raise ValueError(
+                f'Divergência na quantidade de instituições '
+                f'da prioridade {prioridade}.'
+            )
+
+        # Consolida os dados de cada instituição
+        for original, distribuicao in zip(
+            instituicoes_originais,
+            instituicoes_distribuidas
+        ):
+
+            if original['nome'] != distribuicao['nome']:
+                raise ValueError(
+                    f'Divergência entre instituição original '
+                    f'e distribuída na prioridade {prioridade}.'
+                )
+
+            registro = {
+                'Prioridade': original['prioridade'],
+                'Região': original['regiao'],
+                'Localidade': original['localidade'],
+                'Instituição': original['nome'],
+                'Ordem Inscrição': original['ordem_inscricao'],
+                'CNPJ Válido': original['cnpj_valido']
+            }
+
+            total_solicitado = 0
+            total_atendido = 0
+            total_faltante = 0
+
+            for faixa in categorias:
+
+                solicitado = original['solicitado'][faixa]
+                distribuido = distribuicao['faixas'][faixa]
+
+                solicitado_fem = solicitado['feminino']
+                solicitado_masc = solicitado['masculino']
+
+                atendido_fem = distribuido['total_fem']
+                atendido_masc = distribuido['total_masc']
+
+                falta_fem = distribuido['falta_fem']
+                falta_masc = distribuido['falta_masc']
+
+                registro.update({
+                    # Solicitação original
+                    f'Solicitado Fem {faixa}': solicitado_fem,
+                    f'Solicitado Masc {faixa}': solicitado_masc,
+
+                    # Origem do estoque utilizado
+                    f'Específico Fem {faixa}':
+                        distribuido['especifico_fem'],
+
+                    f'Específico Masc {faixa}':
+                        distribuido['especifico_masc'],
+
+                    f'Unissex Fem {faixa}':
+                        distribuido['unissex_fem'],
+
+                    f'Unissex Masc {faixa}':
+                        distribuido['unissex_masc'],
+
+                    # Atendimento final
+                    f'Atendido Fem {faixa}': atendido_fem,
+                    f'Atendido Masc {faixa}': atendido_masc,
+
+                    # Demanda não atendida
+                    f'Falta Fem {faixa}': falta_fem,
+                    f'Falta Masc {faixa}': falta_masc,
+
+                    # Totais por faixa
+                    f'Solicitado Total {faixa}':
+                        solicitado_fem + solicitado_masc,
+
+                    f'Atendido Total {faixa}':
+                        atendido_fem + atendido_masc,
+
+                    f'Falta Total {faixa}':
+                        falta_fem + falta_masc
+                })
+
+                total_solicitado += solicitado_fem + solicitado_masc
+                total_atendido += atendido_fem + atendido_masc
+                total_faltante += falta_fem + falta_masc
+
+            registro.update({
+                'Solicitado Total': total_solicitado,
+                'Atendido Total': total_atendido,
+                'Falta Total': total_faltante
+            })
+
+            registros.append(registro)
+
+    df_resultados = pd.DataFrame(registros)
+
+    return {
+        'instituicoes': df_resultados,
+        'estoque_restante': estoque_atual,
+        'resultados_prioridade': resultados_prioridade
+    }
+
+
 def comparar_solicitado_estoque(demanda_regional, estoques_regionais):
     """
     Compara a demanda solicitada total por prioridade com o estoque disponível por região, localidade, faixa etária e gênero.
