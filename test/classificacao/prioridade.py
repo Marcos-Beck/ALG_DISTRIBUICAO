@@ -454,6 +454,85 @@ try:
 
     terminal.sucesso('SIMULAÇÃO PRIORIDADE CONCLUÍDA!')
 
+    resultados = {
+        'P1': resultado_p1,
+        'P2': resultado_p2,
+        'P3': resultado_p3
+    }
+
+    print('\n========== RESULTADO GERAL ==========')
+
+    for prioridade, resultado in resultados.items():
+
+        solicitado = sum(
+            inst['total_solicitado_fem'] + inst['total_solicitado_masc']
+            for inst in resultado['instituicoes']
+        )
+
+        distribuido = sum(
+            inst['total_distribuido']
+            for inst in resultado['instituicoes']
+        )
+
+        falta = sum(
+            inst['falta_total']
+            for inst in resultado['instituicoes']
+        )
+
+        print(f'\n{prioridade}')
+        print(f'Solicitado: {solicitado}')
+        print(f'Distribuído: {distribuido}')
+        print(f'Não atendido: {falta}')
+
+
+
+    print('\n========== CONFERÊNCIA GLOBAL DE ESTOQUE ==========')
+
+    for faixa, generos in resumo['estoque'].items():
+
+        # Soma o consumo físico das três prioridades
+        consumo_fem = sum(
+            inst['faixas'][faixa]['especifico_fem']
+            for resultado in resultados.values()
+            for inst in resultado['instituicoes']
+        )
+
+        consumo_masc = sum(
+            inst['faixas'][faixa]['especifico_masc']
+            for resultado in resultados.values()
+            for inst in resultado['instituicoes']
+        )
+
+        consumo_uni = sum(
+            inst['faixas'][faixa]['unissex_fem']
+            + inst['faixas'][faixa]['unissex_masc']
+            for resultado in resultados.values()
+            for inst in resultado['instituicoes']
+        )
+
+        estoque_final = resultado_p3['estoque_restante'][faixa]
+
+        print(f'\nFaixa {faixa}')
+
+        print(
+            f"Feminino | Inicial: {generos['feminino']} "
+            f"| Consumido: {consumo_fem} "
+            f"| Final: {estoque_final['feminino']}"
+        )
+
+        print(
+            f"Masculino | Inicial: {generos['masculino']} "
+            f"| Consumido: {consumo_masc} "
+            f"| Final: {estoque_final['masculino']}"
+        )
+
+        print(
+            f"Unissex | Inicial: {generos['unissex']} "
+            f"| Consumido: {consumo_uni} "
+            f"| Final: {estoque_final['unissex']}"
+        )
+
+
 # except Exception as erro:
 #      terminal.erro(f'Falha no teste: {erro}')
      
