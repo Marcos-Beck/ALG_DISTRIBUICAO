@@ -193,41 +193,114 @@ try:
 
     # ETAPA 12 - CONFERIR COMPARATIVO
 
-    terminal.etapa('CONFERINDO DEMANDA X ESTOQUE...')
+    # terminal.etapa('CONFERINDO DEMANDA X ESTOQUE...')
 
-    for regiao, localidades in comparativo.items():
+    # for regiao, localidades in comparativo.items():
 
-        for localidade, faixas in localidades.items():
+    #     for localidade, faixas in localidades.items():
 
-            print(f'\n========== {regiao} / {localidade} ==========')
+    #         print(f'\n========== {regiao} / {localidade} ==========')
 
-            for faixa, valores in faixas.items():
+    #         for faixa, valores in faixas.items():
 
-                print(
-                    f"\n{faixa}:"
-                    f"\n  Feminino: "
-                    f"Demanda {valores['demanda_feminino']} | "
-                    f"Estoque {valores['estoque_feminino']} | "
-                    f"Déficit {valores['deficit_feminino']}"
-                    f"\n  Masculino: "
-                    f"Demanda {valores['demanda_masculino']} | "
-                    f"Estoque {valores['estoque_masculino']} | "
-                    f"Déficit {valores['deficit_masculino']}"
-                    f"\n  Unissex disponível: {valores['estoque_unissex']}"
-                )
+    #             print(
+    #                 f"\n{faixa}:"
+    #                 f"\n  Feminino: "
+    #                 f"Demanda {valores['demanda_feminino']} | "
+    #                 f"Estoque {valores['estoque_feminino']} | "
+    #                 f"Déficit {valores['deficit_feminino']}"
+    #                 f"\n  Masculino: "
+    #                 f"Demanda {valores['demanda_masculino']} | "
+    #                 f"Estoque {valores['estoque_masculino']} | "
+    #                 f"Déficit {valores['deficit_masculino']}"
+    #                 f"\n  Unissex disponível: {valores['estoque_unissex']}"
+    #             )
 
-    terminal.info(
-        f'{len(comparativo)} regiões presentes no comparativo.'
+    # terminal.info(
+    #     f'{len(comparativo)} regiões presentes no comparativo.'
+    # )
+
+    # terminal.sucesso('COMPARATIVO CONCLUÍDO! :D')
+
+    # ETAPA 13 - CONSOLIDAR DEMANDA E ESTOQUE
+
+    terminal.etapa('CONSOLIDANDO DEMANDA E ESTOQUE...')
+
+    resumo = distribuicao.resumir_demanda_estoque(
+        demanda_regional=demanda_regional,
+        estoques_regionais=estoques_regionais
     )
 
-    terminal.sucesso('COMPARATIVO CONCLUÍDO! :D')
+    for prioridade, faixas in resumo['demanda'].items():
 
-except Exception as erro:
-     terminal.erro(f'Falha no teste: {erro}')
+        print(f'\n========== DEMANDA P{prioridade} ==========')
+
+        for faixa, generos in faixas.items():
+
+            print(
+                f"{faixa}: "
+                f"Feminino: {generos['feminino']} | "
+                f"Masculino: {generos['masculino']}"
+            )
+
+    print('\n========== ESTOQUE TOTAL ==========')
+
+    for faixa, generos in resumo['estoque'].items():
+
+        print(
+            f"{faixa}: "
+            f"Feminino: {generos['feminino']} | "
+            f"Masculino: {generos['masculino']} | "
+            f"Unissex: {generos['unissex']}"
+        )
+
+    terminal.sucesso('RESUMO CONSOLIDADO!')
+
+    # ETAPA 14 - SIMULAR ATENDIMENTO DA P1
+
+    terminal.etapa('SIMULANDO ATENDIMENTO DA P1...')
+
+    prioridade_p1 = next(
+        prioridade
+        for prioridade in grupos_distribuicao
+        if str(prioridade).upper().replace('P', '') == '1'
+    )
+
+    resultado_p1 = distribuicao.distribuir_todas_faixas(
+        instituicoes=grupos_distribuicao[prioridade_p1],
+        estoques=resumo['estoque']
+    )
+
+    total_solicitado = sum(
+        instituicao['total_solicitado_fem']
+        + instituicao['total_solicitado_masc']
+        for instituicao in resultado_p1['instituicoes']
+)
+
+    total_distribuido = sum(
+        instituicao['total_distribuido']
+        for instituicao in resultado_p1['instituicoes']
+    )
+
+    total_deficit = sum(
+        instituicao['falta_total']
+        for instituicao in resultado_p1['instituicoes']
+    )
+
+    print('\n========== RESULTADO DA SIMULAÇÃO P1 ==========')
+
+    print(f'Total solicitado: {total_solicitado}')
+    print(f'Total distribuído: {total_distribuido}')
+    print(f'Demanda não atendida: {total_deficit}')
+
+    terminal.sucesso('SIMULAÇÃO P1 CONCLUÍDA!')
+
+# except Exception as erro:
+#      terminal.erro(f'Falha no teste: {erro}')
      
 # debug: detail do erro
-# except Exception as erro:
-#     import traceback
-#     traceback.print_exc()
-#     terminal.erro(f'Falha no teste: {erro}')
+except Exception as erro:
+     import traceback
+     traceback.print_exc()
+     terminal.erro(f'Falha no teste: {erro}')
 
