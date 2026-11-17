@@ -684,3 +684,105 @@ def distribuir_todas_faixas(instituicoes, estoques):
         'estoque_restante': estoque_restante
     }
 
+
+def comparar_solicitado_estoque(demanda_regional, estoques_regionais):
+    """
+    Compara a demanda solicitada total por prioridade com o estoque disponível por região, localidade, faixa etária e gênero.
+    Retorna um dicionário com a estrutura:
+    {
+        'Região': {
+            'Localidade': {
+                'Faixa Etária': {
+                    'demanda_feminino': int,
+                    'demanda_masculino': int,
+                    'estoque_feminino': int,
+                    'estoque_masculino': int,
+                    'estoque_unissex': int,
+                    'deficit_feminino': int,
+                    'deficit_masculino': int
+                }
+            }
+        }
+    }
+    """
+
+    # consolida a demanda de todas as prioridades
+    demanda_total = {}
+
+    for prioridade, regioes in demanda_regional.items():
+
+        for regiao, localidades in regioes.items():
+
+            for localidade, faixas in localidades.items():
+
+                demanda_total.setdefault(regiao, {})
+                demanda_total[regiao].setdefault(localidade, {})
+
+                for faixa, generos in faixas.items():
+
+                    demanda_total[regiao][localidade].setdefault(
+                        faixa,
+                        {'feminino': 0, 'masculino': 0}
+                    )
+
+                    demanda_total[regiao][localidade][faixa]['feminino'] += (
+                        generos['feminino']
+                    )
+
+                    demanda_total[regiao][localidade][faixa]['masculino'] += (
+                        generos['masculino']
+                    )
+
+    resultado = {}
+
+    regioes = dict.fromkeys(
+        list(demanda_total) + list(estoques_regionais)
+    )
+
+    for regiao in regioes:
+
+        resultado[regiao] = {}
+
+        localidades = dict.fromkeys(
+            list(demanda_total.get(regiao, {}))
+            + list(estoques_regionais.get(regiao, {}))
+        )
+
+        for localidade in localidades:
+
+            resultado[regiao][localidade] = {}
+
+            faixas = dict.fromkeys(
+                list(demanda_total.get(regiao, {}).get(localidade, {}))
+                + list(estoques_regionais.get(regiao, {}).get(localidade, {}))
+            )
+
+            for faixa in faixas:
+
+                demanda = demanda_total.get(
+                    regiao, {}
+                ).get(localidade, {}).get(faixa, {})
+
+                estoque = estoques_regionais.get(
+                    regiao, {}
+                ).get(localidade, {}).get(faixa, {})
+
+                demanda_fem = demanda.get('feminino', 0)
+                demanda_masc = demanda.get('masculino', 0)
+
+                estoque_fem = estoque.get('feminino', 0)
+                estoque_masc = estoque.get('masculino', 0)
+                estoque_uni = estoque.get('unissex', 0)
+
+                resultado[regiao][localidade][faixa] = {
+                    'demanda_feminino': demanda_fem,
+                    'demanda_masculino': demanda_masc,
+                    'estoque_feminino': estoque_fem,
+                    'estoque_masculino': estoque_masc,
+                    'estoque_unissex': estoque_uni,
+                    'deficit_feminino': max(0, demanda_fem - estoque_fem),
+                    'deficit_masculino': max(0, demanda_masc - estoque_masc)
+                }
+
+    return resultado
+
