@@ -272,10 +272,10 @@ try:
     )
 
     total_solicitado = sum(
-        instituicao['total_solicitado_fem']
-        + instituicao['total_solicitado_masc']
-        for instituicao in resultado_p1['instituicoes']
-)
+    instituicao['total_solicitado_fem']
+    + instituicao['total_solicitado_masc']
+    for instituicao in resultado_p1['instituicoes']
+    )
 
     total_distribuido = sum(
         instituicao['total_distribuido']
@@ -293,7 +293,166 @@ try:
     print(f'Total distribuído: {total_distribuido}')
     print(f'Demanda não atendida: {total_deficit}')
 
-    terminal.sucesso('SIMULAÇÃO P1 CONCLUÍDA!')
+    print('\n========== 1 CONFERÊNCIA DE ESTOQUE P1 ==========')
+
+    for faixa, generos in resultado_p1['estoque_restante'].items():
+        for genero, quantidade in generos.items():
+            print(f'{faixa} | {genero}: {quantidade}') 
+
+
+    print('\n========== 2 CONFERÊNCIA DE ESTOQUE P1 ==========')
+
+    for faixa, generos in resultado_p1['estoque_restante'].items():
+
+        print(f'\nFaixa {faixa}')
+
+        distribuido_fem = sum(
+            instituicao['faixas'][faixa]['total_fem']
+            for instituicao in resultado_p1['instituicoes']
+        )
+
+        distribuido_masc = sum(
+            instituicao['faixas'][faixa]['total_masc']
+            for instituicao in resultado_p1['instituicoes']
+        )
+
+        print(f'Feminino distribuído: {distribuido_fem}')
+        print(f'Masculino distribuído: {distribuido_masc}')
+        print(f'Estoque restante: {generos}')
+
+    # ETAPA 15 - SIMULAR ATENDIMENTO DA P2
+    terminal.etapa('SIMULANDO ATENDIMENTO DA P2...')
+
+    # estoque restante da P1 passa a ser o estoque inicial da P2
+    estoque_p2 = resultado_p1['estoque_restante']
+
+    prioridade_p2 = next(
+    prioridade
+    for prioridade in grupos_distribuicao
+    if str(prioridade).upper().replace('P', '') == '2'
+    )
+
+    resultado_p2 = distribuicao.distribuir_todas_faixas(
+    instituicoes=grupos_distribuicao[prioridade_p2],
+    estoques=estoque_p2
+    )
+
+    total_solicitado_p2 = sum(
+    instituicao['total_solicitado_fem']
+    + instituicao['total_solicitado_masc']
+    for instituicao in resultado_p2['instituicoes']
+    )
+
+    total_distribuido_p2 = sum(
+        instituicao['total_distribuido']
+        for instituicao in resultado_p2['instituicoes']
+    )
+
+    falta_p2 = sum(
+        instituicao['falta_total']
+        for instituicao in resultado_p2['instituicoes']
+    )
+
+    print('\n========== RESULTADO DA SIMULAÇÃO P2 ==========')
+    print(f'Total solicitado: {total_solicitado_p2}')
+    print(f'Total distribuído: {total_distribuido_p2}')
+    print(f'Demanda não atendida: {falta_p2}')
+
+    print('\n========== 1 CONFERÊNCIA DE ESTOQUE P2 ==========')
+
+    for faixa, generos in resultado_p2['estoque_restante'].items():
+        for genero, quantidade in generos.items():
+            print(f'{faixa} | {genero}: {quantidade}') 
+
+
+    print('\n========== 2 CONFERÊNCIA DE ESTOQUE P2 ==========')
+
+    for faixa, generos in resultado_p2['estoque_restante'].items():
+
+        print(f'\nFaixa {faixa}')
+
+        distribuido_fem = sum(
+            instituicao['faixas'][faixa]['total_fem']
+            for instituicao in resultado_p2['instituicoes']
+        )
+
+        distribuido_masc = sum(
+            instituicao['faixas'][faixa]['total_masc']
+            for instituicao in resultado_p2['instituicoes']
+        )
+
+        print(f'Feminino distribuído: {distribuido_fem}')
+        print(f'Masculino distribuído: {distribuido_masc}')
+        print(f'Estoque restante: {generos}')    
+
+    # ETAPA 16 - SIMULAR ATENDIMENTO DA P3
+    terminal.etapa('SIMULANDO ATENDIMENTO DA P3...')
+
+    # estoque restante da P2 passa a ser o estoque inicial da P3
+    estoque_p3 = resultado_p2['estoque_restante']
+
+    prioridade_p3 = next(
+    prioridade
+    for prioridade in grupos_distribuicao
+    if str(prioridade).upper().replace('P', '') == '3'
+    )
+
+    resultado_p3 = distribuicao.distribuir_todas_faixas(
+    instituicoes=grupos_distribuicao[prioridade_p3],
+    estoques=estoque_p3
+    )
+
+    total_solicitado_p3 = sum(
+    instituicao['total_solicitado_fem']
+    + instituicao['total_solicitado_masc']
+    for instituicao in resultado_p3['instituicoes']
+    )
+
+    total_distribuido_p3 = sum(
+        instituicao['total_distribuido']
+        for instituicao in resultado_p3['instituicoes']
+    )
+
+    falta_p3 = sum(
+        instituicao['falta_total']
+        for instituicao in resultado_p3['instituicoes']
+    )
+
+    print('\n========== RESULTADO DA SIMULAÇÃO P3 ==========')
+    print(f'Total solicitado: {total_solicitado_p3}')
+    print(f'Total distribuído: {total_distribuido_p3}')
+    print(f'Demanda não atendida: {falta_p3}')
+
+    print('\n========== 1 CONFERÊNCIA DE ESTOQUE P3 ==========')
+
+    for faixa, generos in resultado_p3['estoque_restante'].items():
+        for genero, quantidade in generos.items():
+            print(f'{faixa} | {genero}: {quantidade}') 
+
+
+    print('\n========== 2 CONFERÊNCIA DE ESTOQUE P3 ==========')
+
+    for faixa, generos in resultado_p3['estoque_restante'].items():
+
+        print(f'\nFaixa {faixa}')
+
+        distribuido_fem = sum(
+            instituicao['faixas'][faixa]['total_fem']
+            for instituicao in resultado_p3['instituicoes']
+        )
+
+        distribuido_masc = sum(
+            instituicao['faixas'][faixa]['total_masc']
+            for instituicao in resultado_p3['instituicoes']
+        )
+
+        print(f'Feminino distribuído: {distribuido_fem}')
+        print(f'Masculino distribuído: {distribuido_masc}')
+        print(f'Estoque restante: {generos}')   
+
+  
+
+    terminal.sucesso('SIMULAÇÃO PRIORIDADE CONCLUÍDA!')
 
 # except Exception as erro:
 #      terminal.erro(f'Falha no teste: {erro}')
