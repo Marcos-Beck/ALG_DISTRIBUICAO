@@ -3,7 +3,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..','..')))
 
-from modules import leitura, classificacao, distribuicao, terminal
+from modules import leitura, classificacao, distribuicao, relatorio, terminal
 
 from config.caixa_encantada import fontes, categorias, regras
 from config.caixa_encantada import config as campanha
@@ -256,211 +256,42 @@ try:
 
     terminal.sucesso('RESUMO CONSOLIDADO!')
 
-    # ETAPA 14 - SIMULAR ATENDIMENTO DA P1
+    terminal.etapa('EXECUTANDO DISTRIBUIÇÃO DE TODAS AS PRIORIDADES...')
 
-    terminal.etapa('SIMULANDO ATENDIMENTO DA P1...')
-
-    prioridade_p1 = next(
-        prioridade
-        for prioridade in grupos_distribuicao
-        if str(prioridade).upper().replace('P', '') == '1'
+    resultado_final = distribuicao.distribuir_todas_prioridades(
+        grupos_distribuicao=grupos_distribuicao,
+        estoques=resumo['estoque'],
+        categorias=categorias.CATEGORIAS
     )
 
-    resultado_p1 = distribuicao.distribuir_todas_faixas(
-        instituicoes=grupos_distribuicao[prioridade_p1],
-        estoques=resumo['estoque']
+    df_resultados = resultado_final['instituicoes']
+    estoque_final = resultado_final['estoque_restante']
+    resultados = resultado_final['resultados_prioridade']
+
+    terminal.sucesso('DISTRIBUIÇÃO CONSOLIDADA!')
+
+    terminal.info(
+        f'Instituições: {len(df_resultados)}'
     )
 
-    total_solicitado = sum(
-    instituicao['total_solicitado_fem']
-    + instituicao['total_solicitado_masc']
-    for instituicao in resultado_p1['instituicoes']
+    terminal.info(
+        f'Colunas: {len(df_resultados.columns)}'
     )
 
-    total_distribuido = sum(
-        instituicao['total_distribuido']
-        for instituicao in resultado_p1['instituicoes']
+    terminal.info(
+        f'Solicitado: {df_resultados["Solicitado Total"].sum()}'
     )
 
-    total_deficit = sum(
-        instituicao['falta_total']
-        for instituicao in resultado_p1['instituicoes']
+    terminal.info(
+        f'Atendido: {df_resultados["Atendido Total"].sum()}'
     )
 
-    print('\n========== RESULTADO DA SIMULAÇÃO P1 ==========')
-
-    print(f'Total solicitado: {total_solicitado}')
-    print(f'Total distribuído: {total_distribuido}')
-    print(f'Demanda não atendida: {total_deficit}')
-
-    print('\n========== 1 CONFERÊNCIA DE ESTOQUE P1 ==========')
-
-    for faixa, generos in resultado_p1['estoque_restante'].items():
-        for genero, quantidade in generos.items():
-            print(f'{faixa} | {genero}: {quantidade}') 
-
-
-    print('\n========== 2 CONFERÊNCIA DE ESTOQUE P1 ==========')
-
-    for faixa, generos in resultado_p1['estoque_restante'].items():
-
-        print(f'\nFaixa {faixa}')
-
-        distribuido_fem = sum(
-            instituicao['faixas'][faixa]['total_fem']
-            for instituicao in resultado_p1['instituicoes']
-        )
-
-        distribuido_masc = sum(
-            instituicao['faixas'][faixa]['total_masc']
-            for instituicao in resultado_p1['instituicoes']
-        )
-
-        print(f'Feminino distribuído: {distribuido_fem}')
-        print(f'Masculino distribuído: {distribuido_masc}')
-        print(f'Estoque restante: {generos}')
-
-    # ETAPA 15 - SIMULAR ATENDIMENTO DA P2
-    terminal.etapa('SIMULANDO ATENDIMENTO DA P2...')
-
-    # estoque restante da P1 passa a ser o estoque inicial da P2
-    estoque_p2 = resultado_p1['estoque_restante']
-
-    prioridade_p2 = next(
-    prioridade
-    for prioridade in grupos_distribuicao
-    if str(prioridade).upper().replace('P', '') == '2'
+    terminal.info(
+        f'Faltante: {df_resultados["Falta Total"].sum()}'
     )
 
-    resultado_p2 = distribuicao.distribuir_todas_faixas(
-    instituicoes=grupos_distribuicao[prioridade_p2],
-    estoques=estoque_p2
-    )
-
-    total_solicitado_p2 = sum(
-    instituicao['total_solicitado_fem']
-    + instituicao['total_solicitado_masc']
-    for instituicao in resultado_p2['instituicoes']
-    )
-
-    total_distribuido_p2 = sum(
-        instituicao['total_distribuido']
-        for instituicao in resultado_p2['instituicoes']
-    )
-
-    falta_p2 = sum(
-        instituicao['falta_total']
-        for instituicao in resultado_p2['instituicoes']
-    )
-
-    print('\n========== RESULTADO DA SIMULAÇÃO P2 ==========')
-    print(f'Total solicitado: {total_solicitado_p2}')
-    print(f'Total distribuído: {total_distribuido_p2}')
-    print(f'Demanda não atendida: {falta_p2}')
-
-    print('\n========== 1 CONFERÊNCIA DE ESTOQUE P2 ==========')
-
-    for faixa, generos in resultado_p2['estoque_restante'].items():
-        for genero, quantidade in generos.items():
-            print(f'{faixa} | {genero}: {quantidade}') 
-
-
-    print('\n========== 2 CONFERÊNCIA DE ESTOQUE P2 ==========')
-
-    for faixa, generos in resultado_p2['estoque_restante'].items():
-
-        print(f'\nFaixa {faixa}')
-
-        distribuido_fem = sum(
-            instituicao['faixas'][faixa]['total_fem']
-            for instituicao in resultado_p2['instituicoes']
-        )
-
-        distribuido_masc = sum(
-            instituicao['faixas'][faixa]['total_masc']
-            for instituicao in resultado_p2['instituicoes']
-        )
-
-        print(f'Feminino distribuído: {distribuido_fem}')
-        print(f'Masculino distribuído: {distribuido_masc}')
-        print(f'Estoque restante: {generos}')    
-
-    # ETAPA 16 - SIMULAR ATENDIMENTO DA P3
-    terminal.etapa('SIMULANDO ATENDIMENTO DA P3...')
-
-    # estoque restante da P2 passa a ser o estoque inicial da P3
-    estoque_p3 = resultado_p2['estoque_restante']
-
-    prioridade_p3 = next(
-    prioridade
-    for prioridade in grupos_distribuicao
-    if str(prioridade).upper().replace('P', '') == '3'
-    )
-
-    resultado_p3 = distribuicao.distribuir_todas_faixas(
-    instituicoes=grupos_distribuicao[prioridade_p3],
-    estoques=estoque_p3
-    )
-
-    total_solicitado_p3 = sum(
-    instituicao['total_solicitado_fem']
-    + instituicao['total_solicitado_masc']
-    for instituicao in resultado_p3['instituicoes']
-    )
-
-    total_distribuido_p3 = sum(
-        instituicao['total_distribuido']
-        for instituicao in resultado_p3['instituicoes']
-    )
-
-    falta_p3 = sum(
-        instituicao['falta_total']
-        for instituicao in resultado_p3['instituicoes']
-    )
-
-    print('\n========== RESULTADO DA SIMULAÇÃO P3 ==========')
-    print(f'Total solicitado: {total_solicitado_p3}')
-    print(f'Total distribuído: {total_distribuido_p3}')
-    print(f'Demanda não atendida: {falta_p3}')
-
-    print('\n========== 1 CONFERÊNCIA DE ESTOQUE P3 ==========')
-
-    for faixa, generos in resultado_p3['estoque_restante'].items():
-        for genero, quantidade in generos.items():
-            print(f'{faixa} | {genero}: {quantidade}') 
-
-
-    print('\n========== 2 CONFERÊNCIA DE ESTOQUE P3 ==========')
-
-    for faixa, generos in resultado_p3['estoque_restante'].items():
-
-        print(f'\nFaixa {faixa}')
-
-        distribuido_fem = sum(
-            instituicao['faixas'][faixa]['total_fem']
-            for instituicao in resultado_p3['instituicoes']
-        )
-
-        distribuido_masc = sum(
-            instituicao['faixas'][faixa]['total_masc']
-            for instituicao in resultado_p3['instituicoes']
-        )
-
-        print(f'Feminino distribuído: {distribuido_fem}')
-        print(f'Masculino distribuído: {distribuido_masc}')
-        print(f'Estoque restante: {generos}')   
-
-  
 
     terminal.sucesso('SIMULAÇÃO PRIORIDADE CONCLUÍDA!')
-
-    resultados = {
-        'P1': resultado_p1,
-        'P2': resultado_p2,
-        'P3': resultado_p3
-    }
-
-    print('\n========== RESULTADO GERAL ==========')
 
     for prioridade, resultado in resultados.items():
 
@@ -510,7 +341,7 @@ try:
             for inst in resultado['instituicoes']
         )
 
-        estoque_final = resultado_p3['estoque_restante'][faixa]
+        estoque_final = resultado_final['estoque_restante'][faixa]
 
         print(f'\nFaixa {faixa}')
 
@@ -532,6 +363,43 @@ try:
             f"| Final: {estoque_final['unissex']}"
         )
 
+    # ETAPA 14 - CONFERIR DATAFRAME FINAL
+    terminal.etapa('CONFERINDO DATAFRAME FINAL...')
+
+    terminal.info(
+        f'Quantidade de instituições: {len(df_resultados)}'
+    )
+
+    terminal.info(
+        f'Quantidade de colunas: {len(df_resultados.columns)}'
+    )
+
+    terminal.info(
+        f'Instituições por prioridade:\n'
+        f'{df_resultados["Prioridade"].value_counts().sort_index()}'
+    )
+
+    terminal.info(
+        f'Valores nulos: {df_resultados.isna().sum().sum()}'
+    )
+
+    terminal.info(
+        f'Registros duplicados: {df_resultados.duplicated().sum()}'
+    )
+
+    # ETAPA 15 - EXPORTAR RESULTADOS
+    terminal.etapa('EXPORTANDO RESULTADOS...')
+
+    arquivos = relatorio.exportar_resultados(
+        dados=df_resultados,
+        nome=campanha.NOME,
+        ano=campanha.ANO
+    )
+
+    terminal.sucesso('ARQUIVOS EXPORTADOS! :D')
+
+    terminal.info(f'Excel: {arquivos["excel"]}')
+    terminal.info(f'CSV: {arquivos["csv"]}')
 
 # except Exception as erro:
 #      terminal.erro(f'Falha no teste: {erro}')
