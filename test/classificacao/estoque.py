@@ -4,7 +4,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..','..')))
 
 
-from modules import leitura, classificacao, terminal
+from modules import leitura, classificacao, distribuicao, terminal
 
 from config.caixa_encantada import fontes, categorias
 from config.caixa_encantada import config as campanha
@@ -65,7 +65,32 @@ try:
         capital=campanha.CAPITAL
     )
 
-    # ETAPA 4 - CONFERIR RESULTADOS
+    # ETAPA 4 - ESTRUTURAR ESTOQUE
+
+    terminal.etapa('ESTRUTURANDO ESTOQUE...')
+
+    estoques_regionais = distribuicao.estruturar_estoque(
+        arrecadacao=arrecadacao,
+        categorias=categorias.CATEGORIAS
+    )
+    
+    terminal.etapa('CONFERINDO ESTOQUE ESTRUTURADO...')
+
+    for regiao, localidades in estoques_regionais.items():
+
+        for localidade, faixas in localidades.items():
+
+            total = sum(
+                valores['feminino']
+                + valores['masculino']
+                + valores['unissex']
+                for valores in faixas.values()
+            )
+
+            terminal.info(
+                f'{regiao} / {localidade}: {total} brinquedos'
+            )
+    # ETAPA 5 - CONFERIR RESULTADOS
     terminal.etapa('CONFERINDO ESTOQUES...')
 
     print('\n========== REGISTROS PREPARADOS ==========')
