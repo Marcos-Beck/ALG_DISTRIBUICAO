@@ -124,28 +124,21 @@ try:
 
     for prioridade, regioes in demanda_regional.items():
 
-        total_prioridade = 0
-
         print(f'\n========== DEMANDA P{prioridade} ==========')
 
         for regiao, localidades in regioes.items():
 
             for localidade, faixas in localidades.items():
 
-                total = sum(
-                    valores['feminino'] + valores['masculino']
-                    for valores in faixas.values()
-                ) # consolida a demanda por faixa etaria e genero
+                print(f'\n{regiao} / {localidade}')
 
-                total_prioridade += total
+                for faixa, generos in faixas.items():
 
-                print(
-                    f'{regiao} / {localidade}: {total} brinquedos'
-                )
-
-        terminal.info(
-            f'Total P{prioridade}: {total_prioridade} brinquedos'
-        )
+                    print(
+                        f"  {faixa}: "
+                        f"Feminino: {generos['feminino']} | "
+                        f"Masculino: {generos['masculino']}"
+                    )
 
     terminal.sucesso('DEMANDA REGIONAL CALCULADA ;D')
 
