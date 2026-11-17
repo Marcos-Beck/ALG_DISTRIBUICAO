@@ -26,6 +26,28 @@ try:
         colunas=fontes.COL_REG
     )
 
+    arrecadacao = leitura.ler_excel(
+        fontes.ARQ_ARRECADACOES,
+        planilha=fontes.PLAN_ARRECADACOES,
+        colunas=fontes.COL_ARRE
+    )
+
+    colunas_estoque = [
+        categorias.CATEGORIAS[faixa][genero]['estoque']
+        for faixa in categorias.CATEGORIAS
+        for genero in ['feminino', 'masculino']
+    ]
+
+    colunas_estoque += [
+        categorias.CATEGORIAS[faixa]['unissex']
+        for faixa in categorias.CATEGORIAS
+    ]
+
+    arrecadacao = leitura.numericos(
+        dados=arrecadacao,
+        colunas=colunas_estoque
+    )
+
     # ETAPA 2 - CLASSIFICAR INSTITUIÇÕES
     terminal.etapa('CLASSIFICANDO INSTITUIÇÕES...')
 
