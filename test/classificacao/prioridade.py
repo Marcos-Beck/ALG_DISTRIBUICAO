@@ -144,25 +144,90 @@ try:
         categorias=categorias.CATEGORIAS
     )
 
-    for prioridade, regioes in demanda_regional.items():
+    # for prioridade, regioes_demanda in demanda_regional.items():
 
-        print(f'\n========== DEMANDA P{prioridade} ==========')
+    #     print(f'\n========== DEMANDA P{prioridade} ==========')
 
-        for regiao, localidades in regioes.items():
+    #     for regiao, localidades in regioes_demanda.items():
 
-            for localidade, faixas in localidades.items():
+    #         for localidade, faixas in localidades.items():
 
-                print(f'\n{regiao} / {localidade}')
+    #             print(f'\n{regiao} / {localidade}')
 
-                for faixa, generos in faixas.items():
+    #             for faixa, generos in faixas.items():
 
-                    print(
-                        f"  {faixa}: "
-                        f"Feminino: {generos['feminino']} | "
-                        f"Masculino: {generos['masculino']}"
-                    )
+    #                 print(
+    #                     f"  {faixa}: "
+    #                     f"Feminino: {generos['feminino']} | "
+    #                     f"Masculino: {generos['masculino']}"
+    #                 )
 
-    terminal.sucesso('DEMANDA REGIONAL CALCULADA ;D')
+# ETAPA 10 - PREPARAR ESTOQUE
+
+    terminal.etapa('PREPARANDO ESTOQUE...')
+
+    arrecadacao = classificacao.classificar_geografia(
+        dados=arrecadacao,
+        coluna_cidade='Cidade',
+        regioes=regioes,
+        coluna_municipio='Município',
+        coluna_regiao='Região',
+        capital=campanha.CAPITAL
+    )
+
+    estoques_regionais = distribuicao.estruturar_estoque(
+        arrecadacao=arrecadacao,
+        categorias=categorias.CATEGORIAS
+    )
+
+    terminal.sucesso('ESTOQUE PREPARADO!')
+
+    # ETAPA 11 - COMPARAR DEMANDA E ESTOQUE
+
+    terminal.etapa('COMPARANDO SOLICITADO E ESTOQUE...')
+
+    comparativo = distribuicao.comparar_solicitado_estoque(
+        demanda_regional=demanda_regional,
+        estoques_regionais=estoques_regionais
+    )
+
+    # ETAPA 12 - CONFERIR COMPARATIVO
+
+    terminal.etapa('CONFERINDO DEMANDA X ESTOQUE...')
+
+    for regiao, localidades in comparativo.items():
+
+        for localidade, faixas in localidades.items():
+
+            print(f'\n========== {regiao} / {localidade} ==========')
+
+            for faixa, valores in faixas.items():
+
+                print(
+                    f"\n{faixa}:"
+                    f"\n  Feminino: "
+                    f"Demanda {valores['demanda_feminino']} | "
+                    f"Estoque {valores['estoque_feminino']} | "
+                    f"Déficit {valores['deficit_feminino']}"
+                    f"\n  Masculino: "
+                    f"Demanda {valores['demanda_masculino']} | "
+                    f"Estoque {valores['estoque_masculino']} | "
+                    f"Déficit {valores['deficit_masculino']}"
+                    f"\n  Unissex disponível: {valores['estoque_unissex']}"
+                )
+
+    terminal.info(
+        f'{len(comparativo)} regiões presentes no comparativo.'
+    )
+
+    terminal.sucesso('COMPARATIVO CONCLUÍDO! :D')
 
 except Exception as erro:
-    terminal.erro(f'Falha no teste: {erro}')
+     terminal.erro(f'Falha no teste: {erro}')
+     
+# debug: detail do erro
+# except Exception as erro:
+#     import traceback
+#     traceback.print_exc()
+#     terminal.erro(f'Falha no teste: {erro}')
+
