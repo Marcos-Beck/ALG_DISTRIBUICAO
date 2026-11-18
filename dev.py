@@ -233,7 +233,7 @@ def executar(arquivo,raiz):
         parar_processo()  # encerra o processo anterior
         limpar_terminal()  # limpa o terminal antes de iniciar o novo processo
         
-        terminal.info(f'ARQUIVO SELECIONADO: {arquivo.name}')
+        terminal.info(f'ARQUIVO SELECIONADO: {arquivo}')
         terminal.info(f'DIRETORIO DO PROJETO: {raiz}')
         terminal.info(f'MONITORAMENTO ATIVO')
 

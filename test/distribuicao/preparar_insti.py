@@ -7,7 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 from modules import leitura, classificacao, distribuicao, terminal
 
 from config.caixa_encantada import fontes, categorias, regras
-from config.caixa_encantada import config as campanha
+from config.caixa_encantada import campanha as campanha
 
 terminal.titulo('TESTE DE PREPARAÇÃO DAS INSTITUIÇÕES')
 

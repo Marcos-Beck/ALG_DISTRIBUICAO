@@ -1,6 +1,6 @@
 from modules import leitura, classificacao
 from config.caixa_encantada import fontes, categorias, regras
-from config.caixa_encantada import config as campanha
+from config.caixa_encantada import campanha as campanha
 
 # carregar e preparar as bases de dados do projeto
 def carregar_bases():

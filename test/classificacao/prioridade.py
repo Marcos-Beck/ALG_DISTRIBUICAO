@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..','..
 from modules import leitura, classificacao, distribuicao, relatorio, terminal
 
 from config.caixa_encantada import fontes, categorias, regras
-from config.caixa_encantada import config as campanha
+from config.caixa_encantada import campanha as campanha
 
 terminal.titulo('TESTE DE INTEGRAÇÃO: PRIORIDADE E GEOGRAFIA')
 
@@ -124,6 +124,11 @@ try:
                 grupos_geograficos[regiao][localidade][prioridade] = (
                     grupo.copy()
                 )
+
+    grupos_geograficos_novo = classificacao.preparar_grupos_geograficos(
+        dados=classificados,
+        prioridades=campanha.PRIORIDADES_QTDE
+    )
 
     # ETAPA 7 - PREPARAR GRUPOS PARA DISTRIBUIÇÃO
 
@@ -387,26 +392,51 @@ try:
         f'Registros duplicados: {df_resultados.duplicated().sum()}'
     )
 
-    # ETAPA 15 - EXPORTAR RESULTADOS
-    terminal.etapa('EXPORTANDO RESULTADOS...')
+    assert list(grupos_geograficos.keys()) == list(grupos_geograficos_novo.keys())
 
-    arquivos = relatorio.exportar_resultados(
-        dados=df_resultados,
-        nome=campanha.NOME,
-        ano=campanha.ANO
-    )
+    for regiao in grupos_geograficos:
 
-    terminal.sucesso('ARQUIVOS EXPORTADOS! :D')
+        assert list(grupos_geograficos[regiao].keys()) == list(
+            grupos_geograficos_novo[regiao].keys()
+        )
 
-    terminal.info(f'Excel: {arquivos["excel"]}')
-    terminal.info(f'CSV: {arquivos["csv"]}')
+        for localidade in grupos_geograficos[regiao]:
 
-# except Exception as erro:
-#      terminal.erro(f'Falha no teste: {erro}')
-     
-# debug: detail do erro
+            assert list(grupos_geograficos[regiao][localidade].keys()) == list(
+                grupos_geograficos_novo[regiao][localidade].keys()
+            )
+
+            for prioridade in grupos_geograficos[regiao][localidade]:
+
+                antigo = grupos_geograficos[regiao][localidade][prioridade]
+                novo = grupos_geograficos_novo[regiao][localidade][prioridade]
+
+                assert antigo.equals(novo)
+
+    print('Teste de agrupamento geográfico aprovado!')
+
+    print('Teste de agrupamento geográfico aprovado!')
+
+#     # ETAPA 15 - EXPORTAR RESULTADOS
+#     terminal.etapa('EXPORTANDO RESULTADOS...')
+
+#     arquivos = relatorio.exportar_resultados(
+#         dados=df_resultados,
+#         nome=campanha.NOME,
+#         ano=campanha.ANO
+#     )
+
+#     terminal.sucesso('ARQUIVOS EXPORTADOS! :D')
+
+#     terminal.info(f'Excel: {arquivos["excel"]}')
+#     terminal.info(f'CSV: {arquivos["csv"]}')
+
 except Exception as erro:
-     import traceback
-     traceback.print_exc()
-     terminal.erro(f'Falha no teste: {erro}')
+    terminal.erro(f'Falha no teste: {erro}')
+     
+#  debug: detail do erro
+# except Exception as erro:
+#      import traceback
+#      traceback.print_exc()
+#      terminal.erro(f'Falha no teste: {erro}')
 

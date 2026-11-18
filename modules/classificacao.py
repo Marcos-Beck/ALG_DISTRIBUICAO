@@ -384,3 +384,51 @@ def separar_prioridade(
     terminal.sucesso('Instituições separadas por prioridade!')
 
     return grupos
+
+def preparar_grupos_geograficos(
+    dados,
+    prioridades,
+    coluna_prioridade='Prioridade',
+    coluna_regiao='Região',
+    coluna_localidade='Localidade'
+):
+    """
+    Separa as instituições por prioridade, região e localidade.
+
+    Retorna uma estrutura hierárquica:
+    região -> localidade -> prioridade -> DataFrame.
+    """
+
+    grupos_geograficos = {}
+
+    # separa as instituições por prioridade
+    grupos_prioridade = separar_prioridade(
+        dados,
+        prioridades,
+        coluna_prioridade=coluna_prioridade
+    )
+
+    # organiza cada prioridade geograficamente
+    for prioridade, instituicoes in grupos_prioridade.items():
+
+        grupos_regiao = organizar_por_regiao(instituicoes)
+
+        for regiao, dados_regiao in grupos_regiao.items():
+
+            if regiao not in grupos_geograficos:
+                grupos_geograficos[regiao] = {}
+
+            # Separa capital e interior
+            for localidade, dados_localidade in dados_regiao.groupby(
+                coluna_localidade,
+                sort=False
+            ):
+
+                if localidade not in grupos_geograficos[regiao]:
+                    grupos_geograficos[regiao][localidade] = {}
+
+                grupos_geograficos[regiao][localidade][prioridade] = (
+                    dados_localidade
+                )
+
+    return grupos_geograficos
