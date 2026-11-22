@@ -2,6 +2,10 @@ import pandas as pd
 import unicodedata
 from . import terminal
 
+#* = resumo de funcao ou grupo de funcoes
+### = opcional
+
+#* classificar as instituicoes de acordo com a solicitacao, ordem de inscricao e validade do CNPJ
 def classificar_instituicoes(
         dados,
         colunas_solicitacao,
@@ -13,8 +17,8 @@ def classificar_instituicoes(
 ):
     dados = dados.copy()
 
-    # 1 verificar se todas as colunas existem 
-    terminal.info('Validando colunas obrigatórias...')
+    # verificar se todas as colunas existem 
+    ### terminal.etapa('[ CLASSIFICAÇÃO ] Validando colunas obrigatórias...')
     colunas_obg = (
         colunas_solicitacao 
         + [coluna_beneficiario, coluna_cnpj]
@@ -30,8 +34,8 @@ def classificar_instituicoes(
         terminal.erro(mensagem)
         raise ValueError(mensagem)
 
-    # 2 calcular solicitacao total por instituicao
-    terminal.info('Calculando solicitacao total por instituicao...')
+    # calcular solicitacao total por instituicao
+    ### terminal.etapa('[ CLASSIFICAÇÃO ] Calculando solicitacao total por instituicao...')
     solicitacao = dados[colunas_solicitacao].apply(
         pd.to_numeric,
         errors='coerce'
@@ -52,7 +56,7 @@ def classificar_instituicoes(
 
     dados['Solicitação Total'] = solicitacao.fillna(0).sum(axis=1)
 
-    # 3 identificar prioridade qtde 
+    # identificar prioridade qtde 
     def identificar_prioridade(total):
         for prioridade, limites in sorted(prioridades.items()):
             min_val = limites['min']
@@ -67,20 +71,20 @@ def classificar_instituicoes(
         identificar_prioridade
         )
 
-    # 4 extrair ordem de inscricao
-    terminal.info('Extraindo ordem de inscrição...')
+    # extrair ordem de inscricao
+    ### terminal.etapa('[ CLASSIFICAÇÃO ] Extraindo ordem de inscrição...')
     dados['Ordem Inscrição'] = dados[
         coluna_beneficiario
         ].apply(extrair_ordem)
 
-    # 5 validar cnpj
-    terminal.info('Validando CNPJs...')
+    # validar cnpj
+    ### terminal.etapa('[ CLASSIFICAÇÃO ] Validando CNPJs...')
     dados['CNPJ Válido'] = dados[
         coluna_cnpj
         ].apply(validar_cnpj)
 
-    # 6 classificar instituicoes
-    terminal.info('Classificando instituições...')
+    # classificar instituicoes
+    ### terminal.etapa('[ CLASSIFICAÇÃO ] Classificando instituições...')
     dados = dados.sort_values(
         by=[
             'Prioridade',
@@ -95,6 +99,7 @@ def classificar_instituicoes(
     return dados.reset_index(drop=True)
 
 
+#* classificar instituicoes de acordo com a regiao e localidade
 def classificar_geografia(
     dados,
     coluna_cidade,
@@ -114,9 +119,9 @@ def classificar_geografia(
     dados = dados.copy()
     regioes = regioes.copy()
 
-    terminal.etapa('Classificando localização das instituições...')
+    ### terminal.etapa('[ CLASSIFICAÇÃO ] Classificando localização das instituições...')
 
-    # 1. Verificar colunas necessárias
+    # verificar colunas necessarias
     colunas_dados = [coluna_cidade]
     colunas_regioes = [coluna_municipio, coluna_regiao]
 
@@ -139,7 +144,7 @@ def classificar_geografia(
         terminal.erro(mensagem)
         raise ValueError(mensagem)
 
-    # 2. Normalizar nomes dos municípios
+    # normalizar nomes dos municipios
     def normalizar_nome(valor):
         if pd.isna(valor):
             return ''
@@ -160,7 +165,7 @@ def classificar_geografia(
         normalizar_nome
     )
 
-    # 3. Verificar municípios sem região
+    # verificar municipios sem regiao
     if (
         regioes['_Municipio'].eq('').any()
         or regioes[coluna_regiao].isna().any()
@@ -169,7 +174,7 @@ def classificar_geografia(
         terminal.erro(mensagem)
         raise ValueError(mensagem)
 
-    # 4. Verificar se algum município pertence a mais de uma região
+    # verificar se algum municipio pertence a mais de uma regiao
     conflitos = (
         regioes.groupby('_Municipio')[coluna_regiao]
         .nunique()
@@ -185,14 +190,14 @@ def classificar_geografia(
         terminal.erro(mensagem)
         raise ValueError(mensagem)
 
-    # 5. Criar mapeamento município -> região
+    # criar mapeamento municipio -> regiao
     mapa_regioes = (
         regioes.drop_duplicates(subset='_Municipio')
         .set_index('_Municipio')[coluna_regiao]
         .to_dict()
     )
 
-    # 6. Identificar municípios não cadastrados
+    # identificar municipios nao cadastrados
     municipios_nao_encontrados = dados.loc[
         ~dados['_Municipio'].isin(mapa_regioes),
         coluna_cidade
@@ -206,10 +211,10 @@ def classificar_geografia(
         terminal.erro(mensagem)
         raise ValueError(mensagem)
 
-    # 7. Adicionar região
+    # adicionar regiao
     dados['Região'] = dados['_Municipio'].map(mapa_regioes)
 
-    # 8. Identificar capital e interior
+    # identificar capital e interior
     capital_normalizada = normalizar_nome(capital)
 
     dados['Localidade'] = dados['_Municipio'].apply(
@@ -220,15 +225,15 @@ def classificar_geografia(
         )
     )
 
-    # 9. Remover coluna auxiliar
+    # remover coluna auxiliar
     dados = dados.drop(columns=['_Municipio'])
 
-    terminal.sucesso('Classificação geográfica concluída. :D')
+    ### terminal.sucesso('[ CLASSIFICAÇÃO ] Classificação geográfica concluída. :D')
 
     return dados
 
 
-
+#* organizar grupos geograficos
 def organizar_por_regiao(
     dados,
     coluna_regiao='Região',
@@ -246,9 +251,9 @@ def organizar_por_regiao(
 
     dados = dados.copy()
 
-    terminal.etapa('Organizando instituições por região...')
+    ### terminal.etapa('[ CLASSIFICAÇÃO ] Organizando instituições por região...')
 
-    # 1. Verificar colunas necessárias
+    # verificar colunas necessarias
     colunas_obrigatorias = [
         coluna_regiao,
         coluna_localidade
@@ -264,7 +269,7 @@ def organizar_por_regiao(
         terminal.erro(mensagem)
         raise ValueError(mensagem)
 
-    # 2. Verificar localidades válidas
+    # verificar localidades validas
     localidades_validas = ['interior', 'capital']
 
     invalidas = dados.loc[
@@ -277,7 +282,7 @@ def organizar_por_regiao(
         terminal.erro(mensagem)
         raise ValueError(mensagem)
 
-    # 3. Identificar a região onde está a capital
+    # identificar a regiao onde esta a capital
     regioes_capital = dados.loc[
         dados[coluna_localidade] == 'capital',
         coluna_regiao
@@ -291,7 +296,7 @@ def organizar_por_regiao(
         terminal.erro(mensagem)
         raise ValueError(mensagem)
 
-    # 4. Organizar regiões do interior primeiro
+    # organizar regioes do interior primeiro
     grupos = {}
 
     regioes = dados[coluna_regiao].drop_duplicates().tolist()
@@ -301,7 +306,7 @@ def organizar_por_regiao(
         if regiao not in regioes_capital
     ]
 
-    # Adicionar a região da capital por último
+    # adicionar a regiao da capital por ultimo
     regioes_ordenadas = regioes_interior + regioes_capital
 
     for regiao in regioes_ordenadas:
@@ -322,10 +327,12 @@ def organizar_por_regiao(
             [interior, capital]
         ).reset_index(drop=True)
 
-    terminal.sucesso('Instituições organizadas por região.')
+    ### terminal.sucesso('[ CLASSIFICAÇÃO ] Instituições organizadas por região.')
 
     return grupos
 
+
+#* separar instituicoes por grupos de prioridade
 def separar_prioridade(
         dados, 
         prioridades,
@@ -338,9 +345,9 @@ def separar_prioridade(
 
     dados = dados.copy()
 
-    terminal.etapa('Separando instituições por prioridade...')
+    ### terminal.etapa('[ CLASSIFICAÇÃO ] Separando instituições por prioridade...')
 
-    # 1 verificar coluna necessária 
+    # verificar coluna necessaria 
     if coluna_prioridade not in dados.columns:
         mensagem = (
             f'ERRO: Coluna de prioridade ausente:' 
@@ -349,7 +356,7 @@ def separar_prioridade(
         terminal.erro(mensagem)
         raise ValueError(mensagem)
 
-    # 2 verificar prioridades invalidas ou ausentes 
+    # verificar prioridades invalidas ou ausentes 
     prioridades_validas = list(prioridades.keys())
 
     invalidas = dados.loc[
@@ -365,7 +372,7 @@ def separar_prioridade(
         terminal.erro(mensagem)
         raise ValueError(mensagem)
 
-    # 3 grupos na ordem das prioridades 
+    # grupos na ordem das prioridades 
     grupos = {}
 
     for prioridade in sorted(prioridades_validas):
@@ -381,10 +388,12 @@ def separar_prioridade(
             f' {len(instituicoes)} instituições.'
         )
 
-    terminal.sucesso('Instituições separadas por prioridade!')
+    ### terminal.sucesso('[ CLASSIFICAÇÃO ] Instituições separadas por prioridade!')
 
     return grupos
 
+
+#* separar instituicoes por prioridade e geografia
 def preparar_grupos_geograficos(
     dados,
     prioridades,
@@ -398,6 +407,8 @@ def preparar_grupos_geograficos(
     Retorna uma estrutura hierárquica:
     região -> localidade -> prioridade -> DataFrame.
     """
+    
+    ### terminal.etapa('[ CLASSIFICAÇÃO ] Preparando grupos geográficos...')
 
     grupos_geograficos = {}
 

@@ -1,10 +1,21 @@
 import pandas as pd
 from pathlib import Path
+from . import terminal
 
+#* = resumo de funcao ou grupo de funcoes
+### = opcional
 
-# ler arquivos
+#* ler arquivos
 
-def ler_excel(caminho, planilha=0, colunas=None, **kwargs):
+# ler excel
+def ler_excel(
+    caminho, 
+    planilha=0, 
+    colunas=None, 
+    **kwargs
+    ):
+
+    ### terminal.etapa(f'[ LEITURA ] Lendo planilha...')
 
     caminho = Path(caminho)
 
@@ -14,17 +25,23 @@ def ler_excel(caminho, planilha=0, colunas=None, **kwargs):
         usecols=colunas,
         **kwargs
     )
-
+    
     return dados
 
-
+# ler csv
 def ler_csv(
     caminho,
+    nome_arquivo=None,
     colunas=None,
     separador=',',
     encoding='utf-8',
     **kwargs
 ):
+
+    if nome_arquivo is None:
+        nome_arquivo = Path(caminho).name
+
+    ### terminal.etapa(f'[ LEITURA ] Lendo arquivo csv...')
 
     caminho = Path(caminho)
 
@@ -39,14 +56,17 @@ def ler_csv(
     return dados
 
 
-# tratar dados
+#* tratar dados
 
+# converter para numerico
 def numericos(
     dados,
     colunas,
     preencher_com=0,
     tipo='int'
 ):
+
+    ### terminal.etapa(f'[ TRATAMENTO ] Convertendo colunas para numérico...')
 
     dados = dados.copy()
 
@@ -61,12 +81,15 @@ def numericos(
 
     return dados
 
+# preencher nulos e converter para string
 def texto_vazio(
     dados,
     colunas,
     preencher_com='',
     tipo='str'
 ):
+
+    ### terminal.etapa(f'[ TRATAMENTO ] Preenchendo nulos e convertendo para string...')
 
     dados = dados.copy()
 
@@ -78,10 +101,12 @@ def texto_vazio(
 
     return dados
 
+# capitalizar texto
 def capitalize_text(
     dados,
     colunas
 ):
+    ### terminal.etapa(f'[ TRATAMENTO ] Capitalizando texto nas colunas...')
 
     dados = dados.copy()
 
@@ -90,6 +115,3 @@ def capitalize_text(
         dados[coluna] = dados[coluna].str.title()
 
     return dados
-
-
-

@@ -1,7 +1,7 @@
 import re
 
-# ordem de inscricao
 
+#* ordem de inscricao
 def extrair_ordem_insc(beneficiario):
 
     if not isinstance(beneficiario, str):
@@ -17,36 +17,36 @@ def extrair_ordem_insc(beneficiario):
 
     return None
 
-# validacao cnpj
 
+#* validacao cnpj
 def validar_cnpj(cnpj):
 
     if cnpj is None:
         return False
 
-    # Remover pontuação e espaços
+    # remover pontuacao e espacos
     cnpj = re.sub(r'[^A-Za-z0-9]', '', str(cnpj)).upper()
 
-    # Verificar tamanho
+    # verificar tamanho
     if len(cnpj) != 14:
         return False
 
-    # Rejeitar sequências repetidas
+    # rejeitar sequencias repetidas
     if len(set(cnpj)) == 1:
         return False
 
-    # Os dois últimos caracteres devem ser numéricos
+    # os dois ultimos caracteres devem ser numericos
     if not cnpj[-2:].isdigit():
         return False
 
-    # Converter caracteres para valores numéricos
+    # converter caracteres para valores numericos
     valores = [ord(caractere) - 48 for caractere in cnpj]
 
-    # Pesos dos dígitos verificadores
+    # pesos dos digitos verificadores
     pesos_1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
     pesos_2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
 
-    # Primeiro dígito verificador
+    # primeiro digito verificador
     soma_1 = sum(
         valor * peso
         for valor, peso in zip(valores[:12], pesos_1)
@@ -58,7 +58,7 @@ def validar_cnpj(cnpj):
     if digito_1 != valores[12]:
         return False
 
-    # Segundo dígito verificador
+    # segundo digito verificador
     soma_2 = sum(
         valor * peso
         for valor, peso in zip(valores[:13], pesos_2)

@@ -1,8 +1,13 @@
 import pandas as pd
 from . import terminal
 
-# validar estrutura da base
+#* = resumo de funcao ou grupo de funcoes
+### = opcional
+
+#* validar estrutura da base
 def validar_df(dados, nome='DataFrame'):
+
+    ### terminal.etapa(f'[ VALIDACAO ] Validando estrutura...')
 
     if not isinstance(dados, pd.DataFrame):
         mensagem = f'ERRO: {nome} não é um DataFrame válido.'
@@ -16,8 +21,10 @@ def validar_df(dados, nome='DataFrame'):
 
     return True
 
-# validar colunas 
+#* validar colunas 
 def validar_colunas(dados, colunas, nome='DataFrame'):
+
+    ### terminal.etapa(f'[ VALIDACAO ] Validando colunas obrigatórias...')
 
     validar_df(dados, nome)
 
@@ -30,8 +37,10 @@ def validar_colunas(dados, colunas, nome='DataFrame'):
 
     return True
 
-# valores ausentes 
+#* valores ausentes 
 def validar_nulos (dados, colunas, nome='DataFrame'):
+
+    ### terminal.etapa(f'[ VALIDACAO ] Validando valores nulos nas colunas obrigatórias...')
 
     validar_df(dados, nome)
 
@@ -44,9 +53,11 @@ def validar_nulos (dados, colunas, nome='DataFrame'):
 
     return True
 
-# duplicados 
+#* duplicados 
 def validar_duplicados(dados, colunas, nome='DataFrame'):
     
+    ### terminal.etapa(f'[ VALIDACAO ] Validando duplicados nas colunas: {colunas}...')
+
     validar_df(dados, nome)
 
     duplicados = dados.duplicated(subset=colunas, keep=False)
@@ -58,8 +69,10 @@ def validar_duplicados(dados, colunas, nome='DataFrame'):
 
     return True
 
-# chave unica
+#* chave unica
 def validar_chave_unica(dados, colunas, nome='DataFrame'):
+
+    ### terminal.etapa(f'[ VALIDACAO ] Validando chave única nas colunas: {colunas}...')
 
     validar_df(dados, nome)
 
@@ -69,5 +82,3 @@ def validar_chave_unica(dados, colunas, nome='DataFrame'):
         raise ValueError(mensagem)
 
     return True
-
-

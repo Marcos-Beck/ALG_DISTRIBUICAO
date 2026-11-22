@@ -1,12 +1,12 @@
-
 from datetime import datetime
 from colorama import init, Fore, Back, Style
 
+#* = resumo de funcao ou grupo de funcoes
+### = opcional
+
 init(autoreset=True)
 
-
-# configuracoes visuais
-
+#* configuracoes visuais
 CORES = {
     'INFO': Fore.CYAN,
     'TITULO': Fore.BLACK + Style.BRIGHT,
@@ -24,8 +24,7 @@ FUNDOS = {
 }
 
 
-# funcao de log principal
-
+#* funcao de log principal
 def log(tipo, mensagem):
 
     horario = datetime.now().strftime("%H:%M:%S")
@@ -40,8 +39,7 @@ def log(tipo, mensagem):
     )
 
 
-# atalhos
-
+#* atalhos
 def info(mensagem):
     log('INFO', mensagem)
 
@@ -58,18 +56,16 @@ def erro(mensagem):
     log('ERROR', mensagem)
 
 
-# elementos vis
-
+#* elementos visuais
 def titulo(mensagem):
     print(Fore.CYAN + Style.BRIGHT + '=' * 55)
     print(f'{mensagem.upper()}')
     print('=' * 55)
 
-
 def separador():
     print(Fore.LIGHTBLACK_EX + "-" * 55)
 
-
+#* funcao de progresso
 def progresso(atual, total, mensagem):
 
     porcentagem = (atual / total) * 100 if total else 0

@@ -12,7 +12,9 @@ from watchdog.events import FileSystemEventHandler
 
 from modules import terminal
 
-# configuracoes
+#* = resumo de funcao ou grupo de funcoes
+
+#* configuracoes
 
 PASTAS_IGNORADAS = {
     '.git',
@@ -35,7 +37,7 @@ timer_reinicio = None # temporizador para guardar o tempo de espera antes de rei
 
 encerrando = threading.Event() # sinaliza que o processo esta sendo encerrado
 
-# FUNCOES AUX 
+#* funcoes auxiliares
 
 def limpar_terminal():
     '''
@@ -59,7 +61,7 @@ def caminho_ignorado(caminho, raiz, padroes, excecoes=None):
     nome = caminho.name.lower()
     relativo = relativo.lower()
 
-    # 1 verifica excecoes (tem prioridade sobre regras de ignorar)
+    # verifica excecoes (tem prioridade sobre regras de ignorar)
     for padrao in excecoes:
 
         padrao = padrao.lower()
@@ -74,14 +76,14 @@ def caminho_ignorado(caminho, raiz, padroes, excecoes=None):
         ):
             return False
 
-    # 2 ignora pastas padrao
+    # ignora pastas padrao
     if any(
         parte.lower() in PASTAS_IGNORADAS
         for parte in partes
     ):
         return True
 
-    # 3 verifica padroes adc de ignorar
+    # verifica padroes adc de ignorar
     for padrao in padroes:
 
         padrao = padrao.lower()
@@ -98,7 +100,7 @@ def caminho_ignorado(caminho, raiz, padroes, excecoes=None):
 
     return False
 
-# SELECAO DO ARQUIVO
+#* selecionar arquivo
 
 def listar_arquivos(raiz):
     '''
@@ -192,7 +194,7 @@ def selecionar_arquivo(raiz, informado=None):
         )
     return arquivo
 
-# EXECUCAO
+#* executar processo
 
 def parar_processo():
     '''
@@ -265,7 +267,7 @@ def executar(arquivo,raiz):
             processo = None 
             terminal.erro(f'Falha ao executar o processo: {erro}')
 
-# CONTROLE DE REINICIO 
+#* controlar reinicio 
 
 def agendar_reinicio(arquivo, raiz, debounce):
     '''
@@ -306,7 +308,7 @@ def reiniciar(arquivo,raiz):
 
         executar(arquivo, raiz)  # reinicia o processo imediatamente
 
-# MONITORAMENTO 
+#* monitorar alteracoes
 
 class ReloadHandler(FileSystemEventHandler):
     '''
@@ -374,7 +376,7 @@ class ReloadHandler(FileSystemEventHandler):
     def on_deleted(self, event):
         self.verificar_evento(event)
 
-# INICIALIZACAO
+#* inicializar
 
 def main():
     '''

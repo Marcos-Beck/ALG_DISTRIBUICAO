@@ -2,7 +2,8 @@ from modules import leitura, classificacao
 from config.caixa_encantada import fontes, categorias, regras
 from config.caixa_encantada import campanha as campanha
 
-# carregar e preparar as bases de dados do projeto
+
+#* carregar e preparar as bases de dados do projeto
 def carregar_bases():
 
     # carregar inscricoes
@@ -45,7 +46,7 @@ def carregar_bases():
 
     return inscricoes, regioes, arrecadacao
 
-# classificar inscricoes e preparar grupos geograficos
+#* classificar inscricoes e preparar grupos geograficos
 def classificar_inscricoes(inscricoes, regioes):
 
     # identificar colunas de solicitacao
@@ -78,7 +79,7 @@ def classificar_inscricoes(inscricoes, regioes):
 
     return classificados
 
-# preparar grupos geograficos
+#* preparar grupos geograficos
 def preparar_grupos_geograficos(classificados):
 
     grupos_geograficos = classificacao.preparar_grupos_geograficos(
@@ -87,7 +88,3 @@ def preparar_grupos_geograficos(classificados):
     )
 
     return grupos_geograficos
-
-
-
-

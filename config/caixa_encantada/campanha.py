@@ -52,4 +52,3 @@ DISTRIBUICAO = {
     'atendimento_parcial': True
 
 }
-

@@ -5,22 +5,22 @@ ROOT = Path(__file__).resolve().parents[2] # raiz do projeto
 
 DATA = ROOT / 'data' / 'CE'
 
-# arquivos og
 
+# arquivos og
 ARQ_INSCRICOES = DATA / 'Conjunto de Dados - CE 26.xlsx'
 
 ARQ_ARRECADACOES = DATA / 'BASE_DADOS_CE_2025.xlsx'
 
 ARQ_REGIAO = DATA / 'Regiao.csv'
 
-# planilhas
 
+# planilhas
 PLAN_INSCRICOES = 'Inscrições'
 
 PLAN_ARRECADACOES = 'Arrecadações'
 
-# colunas
 
+# colunas
 COL_INSC = [
     'Beneficiario',
     'Nome resp.',

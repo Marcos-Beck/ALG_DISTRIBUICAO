@@ -1,5 +1,10 @@
 import pandas as pd
+from . import terminal
 
+#* = resumo de funcao ou grupo de funcoes
+### = opcional
+
+#* adequar o df de instituicoes para utilizar funcoes de distribuicao
 def preparar_instituicoes(
     dados,
     categorias,
@@ -10,7 +15,7 @@ def preparar_instituicoes(
     utilizada pelas funções de distribuição.
     """
 
-    # Validar coluna de identificação
+    # validar coluna de identificacao
     if coluna_beneficiario not in dados.columns:
         raise ValueError(
             f'Coluna não encontrada: {coluna_beneficiario}'
@@ -38,7 +43,7 @@ def preparar_instituicoes(
                         f'Coluna de solicitação não encontrada: {coluna}'
                     )
 
-                valor = pd.to_numeric(  # garantir que o valor seja numm
+                valor = pd.to_numeric(
                     linha[coluna],
                     errors='raise'
                 )
@@ -52,6 +57,7 @@ def preparar_instituicoes(
     return instituicoes
 
 
+#* consolidar a demanda preservando as informacoes geograficas e de ordem de inscricao
 def preparar_grupos_distribuicao(
     grupos_geograficos,
     categorias,
@@ -62,6 +68,8 @@ def preparar_grupos_distribuicao(
     Reúne instituições de todas as regiões por prioridade,
     preservando região, localidade e ordem de classificação.
     """
+
+    ### terminal.etapa(f'[ DISTRIBUICAO ] Preparando grupos de distribuicao por prioridade...')
 
     grupos = {}
     sequencia = 0
@@ -86,7 +94,7 @@ def preparar_grupos_distribuicao(
                     instituicao['localidade'] = localidade
                     instituicao['prioridade'] = prioridade
 
-                    # ´preserva criterios de classificacao
+                    # preserva criterios de classificacao
                     ordem = linha.get(coluna_ordem, None)
                     cnpj_valido = linha.get(
                         coluna_cnpj_valido,
@@ -128,6 +136,7 @@ def preparar_grupos_distribuicao(
     return grupos
 
 
+#* calcular a demanda por prioridade, região, localidade e faixa etária
 def calcular_demanda_regional(
     grupos_distribuicao,
     categorias
@@ -138,6 +147,8 @@ def calcular_demanda_regional(
 
     Não altera instituições nem estoques.
     """
+
+    ### terminal.etapa('[ DISTRIBUICAO ] Calculando demanda regional por prioridade...')
 
     demanda = {}
 
@@ -176,6 +187,7 @@ def calcular_demanda_regional(
     return demanda
 
 
+#* estruturar o estoque geograficamente + faixa etaria e genero
 def estruturar_estoque(
         arrecadacao,
         categorias,
@@ -183,7 +195,7 @@ def estruturar_estoque(
         coluna_localidade='Localidade',
 ):
     """
-    Estrutura os estoques por região, localidade, faixa etária e gênero.
+    Estrutura os estoques por região, localidade, faixa eteria e genero.
 
     Retorna:
         {
@@ -198,8 +210,9 @@ def estruturar_estoque(
             }
         }
     """
+    ### terminal.etapa('[ DISTRIBUICAO ] Estruturando estoque geograficamente...')
 
-    # 1 validar colunas geograficas
+    # validar colunas geograficas
     colunas_geograficas = [coluna_regiao, coluna_localidade]
 
     for coluna in colunas_geograficas:
@@ -213,7 +226,7 @@ def estruturar_estoque(
                 f'Coluna obrigatória "{coluna}" contém valores nulos.'
                 )
 
-    # 2 identificar colunas estoque
+    # identificar colunas estoque
     colunas_estoque = []
 
     for faixa, generos in categorias.items():
@@ -227,14 +240,14 @@ def estruturar_estoque(
     # remover duplicacoes
     colunas_estoque = list(dict.fromkeys(colunas_estoque))
 
-    # 3 validar colunas estoque
+    # validar colunas estoque
     for coluna in colunas_estoque:
         if coluna not in arrecadacao.columns:
             raise ValueError(
                 f'Coluna de estoque não encontrada: {coluna}'
             )
 
-    # 4 criar copia p/ nao modificar a base og
+    # criar copia p/ nao modificar a base og
     dados = arrecadacao.copy()
 
     # garantir num
@@ -249,13 +262,13 @@ def estruturar_estoque(
                 f'Valores inválidos encontrados na coluna: {coluna}'
             )
 
-    # 5 agrupar por região e localidade
+    # agrupar por região e localidade
     agrupados = dados.groupby(
         [coluna_regiao, coluna_localidade],
         sort=False
     )[colunas_estoque].sum()
 
-    # 6 montar estrutura final
+    # montar estrutura final
     estoques = {}
 
     for (regiao, localidade), valores in agrupados.iterrows():
@@ -280,6 +293,7 @@ def estruturar_estoque(
     return estoques
 
 
+#* distribuir o estoque de forma igualitária
 def distribuir_igualitario(instituicoes, estoque):
     """
     Distribui o estoque de forma igualitária progressiva.
@@ -337,21 +351,8 @@ def distribuir_igualitario(instituicoes, estoque):
 
     return resultado, estoque_restante
 
-# #! BLOCO DE TESTE RAPIDO
-# instituicoes = [
-#     {'nome': 'Instituição A', 'solicitado': 56},
-#     {'nome': 'Instituição B', 'solicitado': 81}
-# ]
 
-# resultado, sobra = distribuir_igualitario(
-#     instituicoes,
-#     estoque=100
-# )
-
-# print(resultado)
-# print('Estoque restante:', sobra)
-
-
+#* distribuir unissex proporcionalmente
 def distribuir_unissex (solicitado_fem, solicitado_masc, estoque):
     """
     Distribui o estoque unissex PROPORCIONALMENTE entre as demandas feminina e masculina.
@@ -402,7 +403,7 @@ def distribuir_unissex_insti(instituicoes, unissex_fem, unissex_masc):
             'unissex_masc': 0
         })
 
-    # Distribuir parcela feminina
+    # distribuir parcela feminina
     distribuicao_fem, _ = distribuir_igualitario(
         [
             {'nome': indice, 'solicitado': item['demanda_fem']}
@@ -414,7 +415,7 @@ def distribuir_unissex_insti(instituicoes, unissex_fem, unissex_masc):
     for indice, item in enumerate(distribuicao_fem):
         resultado[item['nome']]['unissex_fem'] = item['atendido']
 
-    # Distribuir parcela masculina
+    # distribuir parcela masculina
     distribuicao_masc, _ = distribuir_igualitario(
         [
             {'nome': indice, 'solicitado': item['demanda_masc']}
@@ -429,16 +430,7 @@ def distribuir_unissex_insti(instituicoes, unissex_fem, unissex_masc):
     return resultado
 
 
-# #! BLOCO DE TESTE RAPIDO
-# fem, masc, restante = distribuir_unissex(
-#     solicitado_fem=50,
-#     solicitado_masc=50,
-#     estoque=100)
-
-# print(f"Feminino: {fem}, Masculino: {masc}, Restante: {restante}")
-
-
-
+#* distribuir por faixa etária
 def distribuir_faixa_etaria(
     instituicoes,
     estoque_fem,
@@ -452,7 +444,7 @@ def distribuir_faixa_etaria(
 
     resultado = []
 
-    # Preparar registros
+    # preparar registros
     for instituicao in instituicoes:
         resultado.append({
             'nome': instituicao['nome'],
@@ -464,7 +456,7 @@ def distribuir_faixa_etaria(
             'unissex_masc': 0
         })
 
-    # Distribuir estoque feminino específico
+    # distribuir estoque feminino especifico
     distribuicao_fem, estoque_fem_restante = distribuir_igualitario(
         [
             {
@@ -479,7 +471,7 @@ def distribuir_faixa_etaria(
     for item in distribuicao_fem:
         resultado[item['nome']]['especifico_fem'] = item['atendido']
 
-    # Distribuir estoque masculino específico
+    # distribuir estoque masculino especifico
     distribuicao_masc, estoque_masc_restante = distribuir_igualitario(
         [
             {
@@ -494,7 +486,7 @@ def distribuir_faixa_etaria(
     for item in distribuicao_masc:
         resultado[item['nome']]['especifico_masc'] = item['atendido']
 
-    # Calcular demandas restantes por instituição
+    # calcular demandas restantes por instituicao
     solicitacoes_restantes = [
         {
             'nome': item['nome'],
@@ -508,7 +500,7 @@ def distribuir_faixa_etaria(
         for item in resultado
     ]
 
-    # Calcular demanda restante total
+    # calcular demanda restante total
     falta_fem = sum(
         item['demanda_fem'] for item in solicitacoes_restantes
     )
@@ -517,7 +509,7 @@ def distribuir_faixa_etaria(
         item['demanda_masc'] for item in solicitacoes_restantes
     )
 
-    # Dividir estoque unissex proporcionalmente
+    # dividir estoque unissex proporcionalmente
     unissex_fem, unissex_masc, estoque_uni_restante = (
         distribuir_unissex(
             falta_fem,
@@ -526,19 +518,19 @@ def distribuir_faixa_etaria(
         )
     )
 
-    # Distribuir as parcelas unissex entre as instituições
+    # distribuir as parcelas unissex entre as instituicoes
     distribuicao_uni = distribuir_unissex_insti(
         solicitacoes_restantes,
         unissex_fem,
         unissex_masc
     )
 
-    # Registrar quantidades recebidas
+    # registrar quantidades recebidas
     for item in distribuicao_uni:
         resultado[item['indice']]['unissex_fem'] = item['unissex_fem']
         resultado[item['indice']]['unissex_masc'] = item['unissex_masc']
 
-    # Calcular totais
+    # calcular totais
     for item in resultado:
         item['total_fem'] = (
             item['especifico_fem'] + item['unissex_fem']
@@ -570,32 +562,8 @@ def distribuir_faixa_etaria(
     }
 
 
-# #! BLOCO DE TESTE RAPIDO
-# instituicoes = [
-#     {
-#         'nome': 'Instituição A',
-#         'solicitacao_fem': 50,
-#         'solicitacao_masc': 30
-#     },
-#     {
-#         'nome': 'Instituição B',
-#         'solicitacao_fem': 20,
-#         'solicitacao_masc': 40
-#     }
-# ]
 
-# resultado = distribuir_faixa_etaria(
-#     instituicoes,
-#     estoque_fem=60,
-#     estoque_masc=50,
-#     estoque_uni=30
-# )
-
-# for item in resultado['instituicoes']:
-#     print(item)
-
-# print('Estoques restantes:', resultado['estoque_restante'])
-
+#* distribuir estoque para todas as faixas etarias
 def distribuir_todas_faixas(instituicoes, estoques):
     """
     Distribui os estoques para todas as faixas etárias.
@@ -685,11 +653,13 @@ def distribuir_todas_faixas(instituicoes, estoques):
     }
 
 
+#* preparar df final distribuido para todas as prioridades
 def distribuir_todas_prioridades(grupos_distribuicao, estoques, categorias):
     """
     Executa a distribuição de todas as prioridades em sequência
     e retorna um DataFrame consolidado com os resultados.
     """
+    ### terminal.etapa('[ DISTRIBUICAO ] Distribuindo todas as prioridades...')
 
     # Ordena as prioridades numericamente
     prioridades = sorted(
@@ -715,7 +685,7 @@ def distribuir_todas_prioridades(grupos_distribuicao, estoques, categorias):
 
         instituicoes_originais = grupos_distribuicao[prioridade]
 
-        # Executa a distribuição da prioridade atual
+        # executa a distribuicao da prioridade atual
         resultado = distribuir_todas_faixas(
             instituicoes=instituicoes_originais,
             estoques=estoque_atual
@@ -723,7 +693,7 @@ def distribuir_todas_prioridades(grupos_distribuicao, estoques, categorias):
 
         resultados_prioridade[prioridade] = resultado
 
-        # Atualiza o estoque para a próxima prioridade
+        # atualiza o estoque para a proxima prioridade
         estoque_atual = resultado['estoque_restante']
 
         instituicoes_distribuidas = resultado['instituicoes']
@@ -734,7 +704,7 @@ def distribuir_todas_prioridades(grupos_distribuicao, estoques, categorias):
                 f'da prioridade {prioridade}.'
             )
 
-        # Consolida os dados de cada instituição
+        # consolida os dados de cada instituicao
         for original, distribuicao in zip(
             instituicoes_originais,
             instituicoes_distribuidas
@@ -774,11 +744,11 @@ def distribuir_todas_prioridades(grupos_distribuicao, estoques, categorias):
                 falta_masc = distribuido['falta_masc']
 
                 registro.update({
-                    # Solicitação original
+                    # solicitacao original
                     f'Solicitado Fem {faixa}': solicitado_fem,
                     f'Solicitado Masc {faixa}': solicitado_masc,
 
-                    # Origem do estoque utilizado
+                    # origem do estoque utilizado
                     f'Específico Fem {faixa}':
                         distribuido['especifico_fem'],
 
@@ -791,15 +761,15 @@ def distribuir_todas_prioridades(grupos_distribuicao, estoques, categorias):
                     f'Unissex Masc {faixa}':
                         distribuido['unissex_masc'],
 
-                    # Atendimento final
+                    # atendimento final
                     f'Atendido Fem {faixa}': atendido_fem,
                     f'Atendido Masc {faixa}': atendido_masc,
 
-                    # Demanda não atendida
+                    # demanda nao atendida
                     f'Falta Fem {faixa}': falta_fem,
                     f'Falta Masc {faixa}': falta_masc,
 
-                    # Totais por faixa
+                    # totais por faixa
                     f'Solicitado Total {faixa}':
                         solicitado_fem + solicitado_masc,
 
@@ -831,6 +801,7 @@ def distribuir_todas_prioridades(grupos_distribuicao, estoques, categorias):
     }
 
 
+#* comparar a demanda solicitada com o estoque disponivel
 def comparar_solicitado_estoque(demanda_regional, estoques_regionais):
     """
     Compara a demanda solicitada total por prioridade com o estoque disponível por região, localidade, faixa etária e gênero.
@@ -851,6 +822,8 @@ def comparar_solicitado_estoque(demanda_regional, estoques_regionais):
         }
     }
     """
+
+    ### terminal.etapa('[ DISTRIBUICAO ] Comparando demanda solicitada com estoque disponivel...')
 
     # consolida a demanda de todas as prioridades
     demanda_total = {}
@@ -933,6 +906,7 @@ def comparar_solicitado_estoque(demanda_regional, estoques_regionais):
     return resultado
 
 
+#* resumir a demanda e o estoque total por faixa etaria e genero
 def resumir_demanda_estoque(demanda_regional, estoques_regionais):
     """
     Consolida a demanda por prioridade e o estoque total disponível,
@@ -942,12 +916,14 @@ def resumir_demanda_estoque(demanda_regional, estoques_regionais):
     estoque feminino, masculino e unissex disponível no estado.
     """
 
+    ### terminal.etapa('[ DISTRIBUICAO ] Resumindo demanda e estoque total por faixa etaria e genero...')
+
     resumo = {
         'demanda': {},
         'estoque': {}
     }
 
-    # Consolidar demanda por prioridade
+    # consolidar demanda por prioridade
     for prioridade, regioes in demanda_regional.items():
 
         resumo['demanda'][prioridade] = {}
@@ -971,7 +947,7 @@ def resumir_demanda_estoque(demanda_regional, estoques_regionais):
                         generos['masculino']
                     )
 
-    # Consolidar estoque de todas as regiões
+    # consolidar estoque de todas as regioes
     for localidades in estoques_regionais.values():
 
         for faixas in localidades.values():
@@ -992,5 +968,3 @@ def resumir_demanda_estoque(demanda_regional, estoques_regionais):
                     resumo['estoque'][faixa][genero] += generos[genero]
 
     return resumo
-
-
