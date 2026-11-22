@@ -1,6 +1,11 @@
+import pandas as pd
 from modules import distribuicao, classificacao, relatorio, terminal
 from config.caixa_encantada import campanha as campanha, preparacao, categorias
 
+#! armaneza informacoes para criação de relatorios:
+# comparativo: demanda x estoque disponivel 
+# estoque_final: estoque restante apos distribuicao
+# resultados: resultados por prioridade
 
 def main():
 
@@ -8,11 +13,15 @@ def main():
 
     try:
 
-        # PREPARAÇÃO DAS BASES
-
+        #* preparacao das bases
         terminal.etapa('CARREGANDO E PREPARANDO BASES...')
 
         inscricoes, regioes, arrecadacao = preparacao.carregar_bases()
+
+        terminal.info(f'Número de registros de inscrição: {inscricoes.shape[0]}')
+        terminal.info(f'Municipios inscritos: {inscricoes["Cidade"].nunique()}')
+        terminal.info(f'Número de registros de arrecadação: {arrecadacao.shape[0]}')
+        terminal.info(f'Municipios arrecadadores: {arrecadacao["Cidade"].nunique()}')
 
         classificados = preparacao.classificar_inscricoes(
             inscricoes,
@@ -24,8 +33,7 @@ def main():
         )
 
 
-        # PREPARACAO DA DISTRIBUIÇÃO
-
+        #* preparacao da distribuicao
         terminal.etapa('PREPARANDO GRUPOS DE DISTRIBUIÇÃO...')
 
         grupos_distribuicao = distribuicao.preparar_grupos_distribuicao(
@@ -34,8 +42,7 @@ def main():
         )
 
 
-        # CALCULO DA DEMANDA/SOLICITADO
-
+        #* calculo da demanda
         terminal.etapa('CALCULANDO DEMANDA REGIONAL...')
 
         demanda_regional = distribuicao.calcular_demanda_regional(
@@ -44,8 +51,7 @@ def main():
         )
 
 
-        # PREPARACAO DO ESTOQUE
-
+        #* preparacao do estoque
         terminal.etapa('ESTRUTURANDO ESTOQUE...')
 
         arrecadacao = classificacao.classificar_geografia(
@@ -63,8 +69,7 @@ def main():
         )
 
 
-        # CONSOLIDACAO
-
+        #* consolidacao
         terminal.etapa('CONSOLIDANDO DEMANDA E ESTOQUE...')
 
         comparativo = distribuicao.comparar_solicitado_estoque(
@@ -78,8 +83,7 @@ def main():
         )
 
 
-        # EXECUCAO DA DISTRIBUICAO
-
+        #* execucao da distribuicao
         terminal.etapa('EXECUTANDO DISTRIBUIÇÃO...')
 
         resultado_final = distribuicao.distribuir_todas_prioridades(
@@ -89,12 +93,11 @@ def main():
         )
 
         df_resultados = resultado_final['instituicoes']
-        estoque_final = resultado_final['estoque_restante']
+        estoque_final = resultado_final['estoque_restante'] # 
         resultados = resultado_final['resultados_prioridade']
 
 
-        # EXPORTACAO
-
+        #* exportacao
         terminal.etapa('EXPORTANDO RESULTADOS...')
 
         arquivos = relatorio.exportar_resultados(
@@ -113,7 +116,7 @@ def main():
 
     except Exception as erro:
 
-        terminal.erro(f'FALHA NA DISTRIBUIÇÃO: {erro}')
+        terminal.erro(f'FALHA NA DISTRIBUIÇÃO: {erro} D:')
         raise
 
 
