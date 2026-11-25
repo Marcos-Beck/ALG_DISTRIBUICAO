@@ -139,6 +139,20 @@ def main():
 
         resultado_final['reserva'] = estoque_reserva
 
+        resumos_diagnostico = relatorio.gerar_resumos_diagnostico(
+            df_resultados=df_resultados,
+            estoque_reserva=estoque_reserva,
+            estoque_restante=estoque_final
+        )
+        resultado_final['resumos'] = resumos_diagnostico
+
+        for _, row in resumos_diagnostico['Resumo_Prioridades'].iterrows():
+            terminal.info(
+                f'P{int(row["Prioridade"])}: {int(row["Instituicoes"])} inst | '
+                f'Demanda: {int(row["Solicitado Total"])} | '
+                f'Atendido: {int(row["Atendido Total"])} ({row["Percentual Atendimento (%)"]:.2f}%)'
+            )
+
 
         #* exportacao
         terminal.etapa('EXPORTANDO RESULTADOS...')
@@ -146,7 +160,8 @@ def main():
         arquivos = relatorio.exportar_resultados(
             dados=df_resultados,
             nome=campanha.NOME,
-            ano=campanha.ANO
+            ano=campanha.ANO,
+            resumos=resumos_diagnostico
         )
 
         terminal.sucesso('DISTRIBUIÇÃO CONCLUÍDA! :D')
