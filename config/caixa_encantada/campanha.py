@@ -52,3 +52,11 @@ DISTRIBUICAO = {
     'atendimento_parcial': True
 
 }
+
+# reserva obrigatoria de estoque
+
+RESERVA = {
+    'ativa': True,
+    'percentual': 0.15,
+    'arredondamento': 'cima'
+}

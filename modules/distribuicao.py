@@ -1,3 +1,4 @@
+import math
 import pandas as pd
 from . import terminal
 
@@ -387,7 +388,7 @@ def distribuir_unissex (solicitado_fem, solicitado_masc, estoque):
     return fem, masc, estoque_restante
 
 
-def distribuir_unissex_insti(instituicoes, unissex_fem, unissex_masc):
+def distribuir_unissex_insti(instituicoes, dist_unissex_fem, dist_unissex_masc):
     """
     Distribui as parcelas unissex entre as instituições,
     respeitando a demanda restante de cada gênero.
@@ -399,8 +400,8 @@ def distribuir_unissex_insti(instituicoes, unissex_fem, unissex_masc):
         resultado.append({
             'indice': indice,
             'nome': item['nome'],
-            'unissex_fem': 0,
-            'unissex_masc': 0
+            'dist_unissex_fem': 0,
+            'dist_unissex_masc': 0
         })
 
     # distribuir parcela feminina
@@ -409,11 +410,11 @@ def distribuir_unissex_insti(instituicoes, unissex_fem, unissex_masc):
             {'nome': indice, 'solicitado': item['demanda_fem']}
             for indice, item in enumerate(instituicoes)
         ],
-        unissex_fem
+        dist_unissex_fem
     )
 
     for indice, item in enumerate(distribuicao_fem):
-        resultado[item['nome']]['unissex_fem'] = item['atendido']
+        resultado[item['nome']]['dist_unissex_fem'] = item['atendido']
 
     # distribuir parcela masculina
     distribuicao_masc, _ = distribuir_igualitario(
@@ -421,11 +422,11 @@ def distribuir_unissex_insti(instituicoes, unissex_fem, unissex_masc):
             {'nome': indice, 'solicitado': item['demanda_masc']}
             for indice, item in enumerate(instituicoes)
         ],
-        unissex_masc
+        dist_unissex_masc
     )
 
     for indice, item in enumerate(distribuicao_masc):
-        resultado[item['nome']]['unissex_masc'] = item['atendido']
+        resultado[item['nome']]['dist_unissex_masc'] = item['atendido']
 
     return resultado
 
@@ -450,13 +451,13 @@ def distribuir_faixa_etaria(
             'nome': instituicao['nome'],
             'solicitacao_fem': instituicao['solicitacao_fem'],
             'solicitacao_masc': instituicao['solicitacao_masc'],
-            'especifico_fem': 0,
-            'especifico_masc': 0,
-            'unissex_fem': 0,
-            'unissex_masc': 0
+            'dist_especifico_fem': 0,
+            'dist_especifico_masc': 0,
+            'dist_unissex_fem': 0,
+            'dist_unissex_masc': 0
         })
 
-    # distribuir estoque feminino especifico
+    # distribuir estoque feminino especifico distribuido
     distribuicao_fem, estoque_fem_restante = distribuir_igualitario(
         [
             {
@@ -469,9 +470,9 @@ def distribuir_faixa_etaria(
     )
 
     for item in distribuicao_fem:
-        resultado[item['nome']]['especifico_fem'] = item['atendido']
+        resultado[item['nome']]['dist_especifico_fem'] = item['atendido']
 
-    # distribuir estoque masculino especifico
+    # distribuir estoque masculino especifico distribuido
     distribuicao_masc, estoque_masc_restante = distribuir_igualitario(
         [
             {
@@ -484,17 +485,17 @@ def distribuir_faixa_etaria(
     )
 
     for item in distribuicao_masc:
-        resultado[item['nome']]['especifico_masc'] = item['atendido']
+        resultado[item['nome']]['dist_especifico_masc'] = item['atendido']
 
     # calcular demandas restantes por instituicao
     solicitacoes_restantes = [
         {
             'nome': item['nome'],
             'demanda_fem': max(
-                0, item['solicitacao_fem'] - item['especifico_fem']
+                0, item['solicitacao_fem'] - item['dist_especifico_fem']
             ),
             'demanda_masc': max(
-                0, item['solicitacao_masc'] - item['especifico_masc']
+                0, item['solicitacao_masc'] - item['dist_especifico_masc']
             )
         }
         for item in resultado
@@ -510,7 +511,7 @@ def distribuir_faixa_etaria(
     )
 
     # dividir estoque unissex proporcionalmente
-    unissex_fem, unissex_masc, estoque_uni_restante = (
+    dist_unissex_fem, dist_unissex_masc, estoque_uni_restante = (
         distribuir_unissex(
             falta_fem,
             falta_masc,
@@ -521,23 +522,23 @@ def distribuir_faixa_etaria(
     # distribuir as parcelas unissex entre as instituicoes
     distribuicao_uni = distribuir_unissex_insti(
         solicitacoes_restantes,
-        unissex_fem,
-        unissex_masc
+        dist_unissex_fem,
+        dist_unissex_masc
     )
 
     # registrar quantidades recebidas
     for item in distribuicao_uni:
-        resultado[item['indice']]['unissex_fem'] = item['unissex_fem']
-        resultado[item['indice']]['unissex_masc'] = item['unissex_masc']
+        resultado[item['indice']]['dist_unissex_fem'] = item['dist_unissex_fem']
+        resultado[item['indice']]['dist_unissex_masc'] = item['dist_unissex_masc']
 
     # calcular totais
     for item in resultado:
         item['total_fem'] = (
-            item['especifico_fem'] + item['unissex_fem']
+            item['dist_especifico_fem'] + item['dist_unissex_fem']
         )
 
         item['total_masc'] = (
-            item['especifico_masc'] + item['unissex_masc']
+            item['dist_especifico_masc'] + item['dist_unissex_masc']
         )
 
         item['total_distribuido'] = (
@@ -749,17 +750,17 @@ def distribuir_todas_prioridades(grupos_distribuicao, estoques, categorias):
                     f'Solicitado Masc {faixa}': solicitado_masc,
 
                     # origem do estoque utilizado
-                    f'Específico Fem {faixa}':
-                        distribuido['especifico_fem'],
+                    f'Distribuido Fem {faixa}':
+                        distribuido['dist_especifico_fem'],
 
-                    f'Específico Masc {faixa}':
-                        distribuido['especifico_masc'],
+                    f'Distribuido Masc {faixa}':
+                        distribuido['dist_especifico_masc'],
 
-                    f'Unissex Fem {faixa}':
-                        distribuido['unissex_fem'],
+                    f'Distribuido Unissex Fem {faixa}':
+                        distribuido['dist_unissex_fem'],
 
-                    f'Unissex Masc {faixa}':
-                        distribuido['unissex_masc'],
+                    f'Distribuido Unissex Masc {faixa}':
+                        distribuido['dist_unissex_masc'],
 
                     # atendimento final
                     f'Atendido Fem {faixa}': atendido_fem,
@@ -968,3 +969,66 @@ def resumir_demanda_estoque(demanda_regional, estoques_regionais):
                     resumo['estoque'][faixa][genero] += generos[genero]
 
     return resumo
+
+
+#* separar reserva obrigatoria de estoque por faixa etaria e genero
+def separar_reserva_estoque(
+    estoques,
+    percentual=0.15,
+    ativa=True,
+    arredondamento='cima'
+):
+    """
+    Calcula a reserva obrigatoria de estoque por faixa etaria e genero
+    (incluindo unissex), retornando bruto, reservado e distribuivel.
+    """
+
+    if not ativa or percentual <= 0:
+        bruto = {
+            faixa: {genero: int(qtd) for genero, qtd in generos.items()}
+            for faixa, generos in estoques.items()
+        }
+        reservado = {
+            faixa: {genero: 0 for genero in generos}
+            for faixa, generos in estoques.items()
+        }
+        distribuivel = {
+            faixa: {genero: int(qtd) for genero, qtd in generos.items()}
+            for faixa, generos in estoques.items()
+        }
+        return {
+            'bruto': bruto,
+            'reservado': reservado,
+            'distribuivel': distribuivel
+        }
+
+    bruto = {}
+    reservado = {}
+    distribuivel = {}
+
+    for faixa, generos in estoques.items():
+        bruto[faixa] = {}
+        reservado[faixa] = {}
+        distribuivel[faixa] = {}
+
+        for genero, quantidade in generos.items():
+            total = int(quantidade)
+
+            if arredondamento == 'cima':
+                qtd_reservada = math.ceil(total * percentual)
+            else:
+                qtd_reservada = math.floor(total * percentual)
+
+            # garante que a reserva nao ultrapasse o estoque bruto nem fique negativa
+            qtd_reservada = max(0, min(total, qtd_reservada))
+            qtd_distribuivel = total - qtd_reservada
+
+            bruto[faixa][genero] = total
+            reservado[faixa][genero] = qtd_reservada
+            distribuivel[faixa][genero] = qtd_distribuivel
+
+    return {
+        'bruto': bruto,
+        'reservado': reservado,
+        'distribuivel': distribuivel
+    }

@@ -83,18 +83,58 @@ def main():
         )
 
 
+        #* reserva obrigatoria de estoque
+        terminal.etapa('CALCULANDO RESERVA OBRIGATÓRIA DE ESTOQUE...')
+
+        estoque_reserva = distribuicao.separar_reserva_estoque(
+            estoques=resumo['estoque'],
+            percentual=campanha.RESERVA['percentual'],
+            ativa=campanha.RESERVA['ativa'],
+            arredondamento=campanha.RESERVA['arredondamento']
+        )
+
+        total_bruto = sum(
+            sum(generos.values())
+            for generos in estoque_reserva['bruto'].values()
+        )
+        total_reservado = sum(
+            sum(generos.values())
+            for generos in estoque_reserva['reservado'].values()
+        )
+        total_distribuivel = sum(
+            sum(generos.values())
+            for generos in estoque_reserva['distribuivel'].values()
+        )
+
+        terminal.info(f'Estoque bruto arrecadado: {total_bruto}')
+        terminal.info(f'Estoque reservado ({campanha.RESERVA["percentual"] * 100:.0f}%): {total_reservado}')
+        terminal.info(f'Estoque disponivel para distribuicao: {total_distribuivel}')
+
+
         #* execucao da distribuicao
         terminal.etapa('EXECUTANDO DISTRIBUIÇÃO...')
 
         resultado_final = distribuicao.distribuir_todas_prioridades(
             grupos_distribuicao,
-            resumo['estoque'],
+            estoque_reserva['distribuivel'],
             categorias.CATEGORIAS
         )
 
         df_resultados = resultado_final['instituicoes']
-        estoque_final = resultado_final['estoque_restante'] # 
+        estoque_final = resultado_final['estoque_restante']
         resultados = resultado_final['resultados_prioridade']
+
+        total_distribuido = int(df_resultados['Atendido Total'].sum())
+        total_restante_distribuivel = sum(
+            sum(generos.values())
+            for generos in estoque_final.values()
+        )
+
+        terminal.info(f'Total distribuido: {total_distribuido}')
+        terminal.info(f'Estoque restante distribuivel (nao inclui reserva): {total_restante_distribuivel}')
+        terminal.info(f'Reserva intacta: {total_reservado}')
+
+        resultado_final['reserva'] = estoque_reserva
 
 
         #* exportacao
