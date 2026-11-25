@@ -654,8 +654,378 @@ def distribuir_todas_faixas(instituicoes, estoques):
     }
 
 
+#* calcular peso da penalizacao gradual
+def calcular_peso_penalizacao(solicitado, penalizacao=None):
+    """
+    Calcula o peso proporcional de uma instituicao conforme seu volume
+    total solicitado e os parametros configuraveis de penalizacao.
+    """
+
+    if not penalizacao or not penalizacao.get('ativa', True):
+        return 1.0
+
+    inicio = penalizacao.get('inicio', 0)
+    limite = penalizacao.get('limite', inicio)
+    intensidade = penalizacao.get('intensidade', 0.0)
+
+    if solicitado <= inicio:
+        return 1.0
+
+    if limite <= inicio or solicitado >= limite:
+        return max(0.0, 1.0 - intensidade)
+
+    fracao = (solicitado - inicio) / (limite - inicio)
+    return max(0.0, 1.0 - intensidade * fracao)
+
+
+#* alocar estoque de forma proporcional ponderada com redistribuicao de cotas
+def alocar_proporcional_ponderado(demandas, estoque, pesos=None):
+    """
+    Distribui um estoque inteiro proporcionalmente as demandas restantes
+    multiplicadas pelos pesos, redistribuindo excedentes quando alguma
+    instituicao atinge o teto da sua solicitacao.
+    """
+
+    n = len(demandas)
+    if n == 0 or estoque <= 0:
+        return [0] * n, estoque
+
+    if pesos is None:
+        pesos = [1.0] * n
+
+    alocado = [0] * n
+    restante = int(estoque)
+
+    while restante > 0:
+        ativas = [
+            i for i in range(n)
+            if (demandas[i] - alocado[i]) > 0 and pesos[i] > 0
+        ]
+
+        if not ativas:
+            break
+
+        soma_ponderada = sum(
+            (demandas[i] - alocado[i]) * pesos[i]
+            for i in ativas
+        )
+
+        if soma_ponderada <= 0:
+            break
+
+        cotas = {
+            i: restante * ((demandas[i] - alocado[i]) * pesos[i]) / soma_ponderada
+            for i in ativas
+        }
+
+        # se alguma cota atingir ou superar a demanda restante, fixa no teto e redistribui o saldo
+        saturadas = [
+            i for i in ativas
+            if cotas[i] >= (demandas[i] - alocado[i])
+        ]
+
+        if saturadas:
+            for i in saturadas:
+                ganho = demandas[i] - alocado[i]
+                alocado[i] += ganho
+                restante -= ganho
+            continue
+
+        pisos = {i: int(math.floor(cotas[i])) for i in ativas}
+        for i in ativas:
+            alocado[i] += pisos[i]
+            restante -= pisos[i]
+
+        if restante > 0:
+            ordenados = sorted(
+                ativas,
+                key=lambda i: (-(cotas[i] - pisos[i]), i)
+            )
+            for i in ordenados[:restante]:
+                alocado[i] += 1
+                restante -= 1
+
+    return alocado, restante
+
+
+#* distribuir parcela unissex em uma faixa com metodo igualitario ou ponderado
+def _distribuir_unissex_em_faixa(falta_fem, falta_masc, estoque_uni, pesos=None):
+    """
+    Divide o estoque unissex entre demandas feminina e masculina restantes
+    e distribui entre as instituicoes sem consumo duplo.
+    """
+
+    n = len(falta_fem)
+    if estoque_uni <= 0 or n == 0:
+        return [0] * n, [0] * n, estoque_uni
+
+    if pesos is None:
+        tot_ff = sum(falta_fem)
+        tot_fm = sum(falta_masc)
+    else:
+        tot_ff = sum(falta_fem[i] for i in range(n) if pesos[i] > 0)
+        tot_fm = sum(falta_masc[i] for i in range(n) if pesos[i] > 0)
+
+    if tot_ff + tot_fm <= 0:
+        return [0] * n, [0] * n, estoque_uni
+
+    parcela_fem, parcela_masc, estoque_uni_restante = distribuir_unissex(
+        tot_ff,
+        tot_fm,
+        estoque_uni
+    )
+
+    if pesos is None:
+        dist_f, _ = distribuir_igualitario(
+            [{'nome': i, 'solicitado': falta_fem[i]} for i in range(n)],
+            parcela_fem
+        )
+        dist_m, _ = distribuir_igualitario(
+            [{'nome': i, 'solicitado': falta_masc[i]} for i in range(n)],
+            parcela_masc
+        )
+        al_uf = [item['atendido'] for item in dist_f]
+        al_um = [item['atendido'] for item in dist_m]
+    else:
+        al_uf, _ = alocar_proporcional_ponderado(falta_fem, parcela_fem, pesos)
+        al_um, _ = alocar_proporcional_ponderado(falta_masc, parcela_masc, pesos)
+
+    return al_uf, al_um, estoque_uni_restante
+
+
+#* aplicar rodada igualitaria por faixa sobre demandas-alvo
+def _aplicar_rodada_igualitaria_faixas(instituicoes, alvos, estoque_atual, atendido_inst):
+    """
+    Executa uma rodada igualitaria em todas as faixas sobre alvos definidos,
+    atualizando estoque_atual e atendido_inst no local.
+    """
+
+    for faixa in estoque_atual:
+        dem_f = [alvos[i][faixa]['feminino'] for i in range(len(instituicoes))]
+        dem_m = [alvos[i][faixa]['masculino'] for i in range(len(instituicoes))]
+
+        if sum(dem_f) + sum(dem_m) == 0:
+            continue
+
+        res_f, estoque_atual[faixa]['feminino'] = distribuir_igualitario(
+            [{'nome': i, 'solicitado': dem_f[i]} for i in range(len(instituicoes))],
+            estoque_atual[faixa]['feminino']
+        )
+        res_m, estoque_atual[faixa]['masculino'] = distribuir_igualitario(
+            [{'nome': i, 'solicitado': dem_m[i]} for i in range(len(instituicoes))],
+            estoque_atual[faixa]['masculino']
+        )
+
+        al_f = [item['atendido'] for item in res_f]
+        al_m = [item['atendido'] for item in res_m]
+
+        falta_f = [dem_f[i] - al_f[i] for i in range(len(instituicoes))]
+        falta_m = [dem_m[i] - al_m[i] for i in range(len(instituicoes))]
+
+        al_uf, al_um, estoque_atual[faixa]['unissex'] = _distribuir_unissex_em_faixa(
+            falta_f,
+            falta_m,
+            estoque_atual[faixa]['unissex']
+        )
+
+        for i in range(len(instituicoes)):
+            atendido_inst[i][faixa]['dist_especifico_fem'] += al_f[i]
+            atendido_inst[i][faixa]['dist_especifico_masc'] += al_m[i]
+            atendido_inst[i][faixa]['dist_unissex_fem'] += al_uf[i]
+            atendido_inst[i][faixa]['dist_unissex_masc'] += al_um[i]
+
+
+#* distribuir prioridade com meta minima progressiva e proporcionalidade ponderada
+def distribuir_prioridade_proporcional(
+    instituicoes,
+    estoques,
+    minimo=None,
+    penalizacao=None
+):
+    """
+    Executa a distribuicao de um grupo de prioridade com meta minima
+    progressiva opcional e distribuicao proporcional ponderada pela
+    penalizacao configurada.
+    """
+
+    estoque_atual = {
+        faixa: valores.copy()
+        for faixa, valores in estoques.items()
+    }
+
+    faixas_lista = list(estoque_atual.keys())
+    buckets = [(faixa, genero) for faixa in faixas_lista for genero in ('feminino', 'masculino')]
+
+    atendido_inst = [
+        {
+            faixa: {
+                'dist_especifico_fem': 0,
+                'dist_especifico_masc': 0,
+                'dist_unissex_fem': 0,
+                'dist_unissex_masc': 0
+            }
+            for faixa in faixas_lista
+        }
+        for _ in instituicoes
+    ]
+
+    totais_solicitados = [
+        sum(
+            inst['solicitado'][faixa][genero]
+            for faixa in faixas_lista
+            for genero in ('feminino', 'masculino')
+        )
+        for inst in instituicoes
+    ]
+
+    pesos = [
+        calcular_peso_penalizacao(total, penalizacao)
+        for total in totais_solicitados
+    ]
+
+    # sub-etapa A: meta minima progressiva (passe 1 por perfil e passe 2 de compensacao)
+    if minimo and minimo.get('ativo', False) and minimo.get('quantidade', 0) > 0:
+        qtd_minima = int(minimo['quantidade'])
+
+        alvos_p1 = []
+        for idx, inst in enumerate(instituicoes):
+            dem_flat = [inst['solicitado'][faixa][genero] for (faixa, genero) in buckets]
+            alvo_total = min(qtd_minima, totais_solicitados[idx])
+            m_flat, _ = alocar_proporcional_ponderado(dem_flat, alvo_total)
+            alvo_dict = {}
+            for b_idx, (faixa, genero) in enumerate(buckets):
+                alvo_dict.setdefault(faixa, {})[genero] = m_flat[b_idx]
+            alvos_p1.append(alvo_dict)
+
+        _aplicar_rodada_igualitaria_faixas(instituicoes, alvos_p1, estoque_atual, atendido_inst)
+
+        # passe 2: aproxima instituicoes abaixo da meta usando apenas faixas com saldo disponivel
+        alvos_p2 = []
+        for idx, inst in enumerate(instituicoes):
+            ja_recebido = sum(
+                atendido_inst[idx][faixa]['dist_especifico_fem']
+                + atendido_inst[idx][faixa]['dist_especifico_masc']
+                + atendido_inst[idx][faixa]['dist_unissex_fem']
+                + atendido_inst[idx][faixa]['dist_unissex_masc']
+                for faixa in faixas_lista
+            )
+            gap = max(0, min(qtd_minima, totais_solicitados[idx]) - ja_recebido)
+            dem_disp = []
+            for (faixa, genero) in buckets:
+                suf = 'fem' if genero == 'feminino' else 'masc'
+                ja_fg = (
+                    atendido_inst[idx][faixa][f'dist_especifico_{suf}']
+                    + atendido_inst[idx][faixa][f'dist_unissex_{suf}']
+                )
+                rest_fg = max(0, inst['solicitado'][faixa][genero] - ja_fg)
+                tem_estoque = (estoque_atual[faixa][genero] + estoque_atual[faixa]['unissex']) > 0
+                dem_disp.append(rest_fg if tem_estoque else 0)
+
+            m2_flat, _ = alocar_proporcional_ponderado(dem_disp, min(gap, sum(dem_disp)))
+            alvo_dict = {}
+            for b_idx, (faixa, genero) in enumerate(buckets):
+                alvo_dict.setdefault(faixa, {})[genero] = m2_flat[b_idx]
+            alvos_p2.append(alvo_dict)
+
+        _aplicar_rodada_igualitaria_faixas(instituicoes, alvos_p2, estoque_atual, atendido_inst)
+
+    # sub-etapa B: distribuicao proporcional ponderada do saldo restante
+    for faixa in faixas_lista:
+        rest_f = [
+            inst['solicitado'][faixa]['feminino']
+            - atendido_inst[i][faixa]['dist_especifico_fem']
+            - atendido_inst[i][faixa]['dist_unissex_fem']
+            for i, inst in enumerate(instituicoes)
+        ]
+        rest_m = [
+            inst['solicitado'][faixa]['masculino']
+            - atendido_inst[i][faixa]['dist_especifico_masc']
+            - atendido_inst[i][faixa]['dist_unissex_masc']
+            for i, inst in enumerate(instituicoes)
+        ]
+
+        al_f, estoque_atual[faixa]['feminino'] = alocar_proporcional_ponderado(
+            rest_f, estoque_atual[faixa]['feminino'], pesos
+        )
+        al_m, estoque_atual[faixa]['masculino'] = alocar_proporcional_ponderado(
+            rest_m, estoque_atual[faixa]['masculino'], pesos
+        )
+
+        falta_f = [rest_f[i] - al_f[i] for i in range(len(instituicoes))]
+        falta_m = [rest_m[i] - al_m[i] for i in range(len(instituicoes))]
+
+        al_uf, al_um, estoque_atual[faixa]['unissex'] = _distribuir_unissex_em_faixa(
+            falta_f,
+            falta_m,
+            estoque_atual[faixa]['unissex'],
+            pesos=pesos
+        )
+
+        for i in range(len(instituicoes)):
+            atendido_inst[i][faixa]['dist_especifico_fem'] += al_f[i]
+            atendido_inst[i][faixa]['dist_especifico_masc'] += al_m[i]
+            atendido_inst[i][faixa]['dist_unissex_fem'] += al_uf[i]
+            atendido_inst[i][faixa]['dist_unissex_masc'] += al_um[i]
+
+    # montar estrutura de retorno compativel com distribuir_todas_faixas
+    resultado = []
+    for idx, inst in enumerate(instituicoes):
+        faixas_res = {}
+        for faixa in faixas_lista:
+            sol_f = inst['solicitado'][faixa]['feminino']
+            sol_m = inst['solicitado'][faixa]['masculino']
+            dados_f = atendido_inst[idx][faixa]
+
+            tot_f = dados_f['dist_especifico_fem'] + dados_f['dist_unissex_fem']
+            tot_m = dados_f['dist_especifico_masc'] + dados_f['dist_unissex_masc']
+
+            faixas_res[faixa] = {
+                'solicitacao_fem': sol_f,
+                'solicitacao_masc': sol_m,
+                'dist_especifico_fem': dados_f['dist_especifico_fem'],
+                'dist_especifico_masc': dados_f['dist_especifico_masc'],
+                'dist_unissex_fem': dados_f['dist_unissex_fem'],
+                'dist_unissex_masc': dados_f['dist_unissex_masc'],
+                'total_fem': tot_f,
+                'total_masc': tot_m,
+                'total_distribuido': tot_f + tot_m,
+                'falta_fem': sol_f - tot_f,
+                'falta_masc': sol_m - tot_m
+            }
+
+        tot_sol_f = sum(f['solicitacao_fem'] for f in faixas_res.values())
+        tot_sol_m = sum(f['solicitacao_masc'] for f in faixas_res.values())
+        tot_at_f = sum(f['total_fem'] for f in faixas_res.values())
+        tot_at_m = sum(f['total_masc'] for f in faixas_res.values())
+        falta_tot = sum(f['falta_fem'] + f['falta_masc'] for f in faixas_res.values())
+
+        resultado.append({
+            'nome': inst['nome'],
+            'faixas': faixas_res,
+            'peso_penalizacao': pesos[idx],
+            'total_solicitado_fem': tot_sol_f,
+            'total_solicitado_masc': tot_sol_m,
+            'total_fem': tot_at_f,
+            'total_masc': tot_at_m,
+            'total_distribuido': tot_at_f + tot_at_m,
+            'falta_total': falta_tot
+        })
+
+    return {
+        'instituicoes': resultado,
+        'estoque_restante': estoque_atual
+    }
+
+
 #* preparar df final distribuido para todas as prioridades
-def distribuir_todas_prioridades(grupos_distribuicao, estoques, categorias):
+def distribuir_todas_prioridades(
+    grupos_distribuicao,
+    estoques,
+    categorias,
+    minimo=None,
+    penalizacao=None,
+    prioridades_proporcionais=None
+):
     """
     Executa a distribuição de todas as prioridades em sequência
     e retorna um DataFrame consolidado com os resultados.
@@ -686,11 +1056,24 @@ def distribuir_todas_prioridades(grupos_distribuicao, estoques, categorias):
 
         instituicoes_originais = grupos_distribuicao[prioridade]
 
-        # executa a distribuicao da prioridade atual
-        resultado = distribuir_todas_faixas(
-            instituicoes=instituicoes_originais,
-            estoques=estoque_atual
+        usar_proporcional = (
+            prioridades_proporcionais is not None
+            and prioridade in prioridades_proporcionais
         )
+
+        # executa a distribuicao da prioridade atual
+        if usar_proporcional:
+            resultado = distribuir_prioridade_proporcional(
+                instituicoes=instituicoes_originais,
+                estoques=estoque_atual,
+                minimo=minimo,
+                penalizacao=penalizacao
+            )
+        else:
+            resultado = distribuir_todas_faixas(
+                instituicoes=instituicoes_originais,
+                estoques=estoque_atual
+            )
 
         resultados_prioridade[prioridade] = resultado
 
@@ -785,10 +1168,22 @@ def distribuir_todas_prioridades(grupos_distribuicao, estoques, categorias):
                 total_atendido += atendido_fem + atendido_masc
                 total_faltante += falta_fem + falta_masc
 
+            percentual_atendimento = (
+                round((total_atendido / total_solicitado) * 100, 2)
+                if total_solicitado > 0
+                else 0.0
+            )
+            peso_aplicado = round(
+                distribuicao.get('peso_penalizacao', 1.0),
+                4
+            )
+
             registro.update({
                 'Solicitado Total': total_solicitado,
                 'Atendido Total': total_atendido,
-                'Falta Total': total_faltante
+                'Falta Total': total_faltante,
+                'Percentual Atendimento': percentual_atendimento,
+                'Peso Penalizacao': peso_aplicado
             })
 
             registros.append(registro)

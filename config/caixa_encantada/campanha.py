@@ -20,16 +20,11 @@ PRIORIDADES_QTDE = {
 
     1: {
         'min': 0,
-        'max': 200
+        'max': 300
     },
 
     2: {
-        'min': 201,
-        'max': 260
-    },
-
-    3: {
-        'min': 261,
+        'min': 301,
         'max': None
     }
 
@@ -59,4 +54,21 @@ RESERVA = {
     'ativa': True,
     'percentual': 0.15,
     'arredondamento': 'cima'
+}
+
+# meta minima progressiva de atendimento
+
+MINIMO_ATENDIMENTO = {
+    'ativo': True,
+    'quantidade': 200,
+    'prioridades': [2]
+}
+
+# penalizacao gradual de solicitacoes elevadas
+
+PENALIZACAO = {
+    'ativa': True,
+    'inicio': 700,
+    'limite': 1200,
+    'intensidade': 1.0
 }

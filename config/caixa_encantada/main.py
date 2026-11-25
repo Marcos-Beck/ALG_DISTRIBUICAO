@@ -117,7 +117,10 @@ def main():
         resultado_final = distribuicao.distribuir_todas_prioridades(
             grupos_distribuicao,
             estoque_reserva['distribuivel'],
-            categorias.CATEGORIAS
+            categorias.CATEGORIAS,
+            minimo=campanha.MINIMO_ATENDIMENTO,
+            penalizacao=campanha.PENALIZACAO,
+            prioridades_proporcionais=campanha.MINIMO_ATENDIMENTO.get('prioridades', [])
         )
 
         df_resultados = resultado_final['instituicoes']
