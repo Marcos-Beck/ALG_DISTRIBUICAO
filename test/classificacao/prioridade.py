@@ -328,20 +328,20 @@ try:
 
         # Soma o consumo físico das três prioridades
         consumo_fem = sum(
-            inst['faixas'][faixa]['especifico_fem']
+            inst['faixas'][faixa]['dist_especifico_fem']
             for resultado in resultados.values()
             for inst in resultado['instituicoes']
         )
 
         consumo_masc = sum(
-            inst['faixas'][faixa]['especifico_masc']
+            inst['faixas'][faixa]['dist_especifico_masc']
             for resultado in resultados.values()
             for inst in resultado['instituicoes']
         )
 
         consumo_uni = sum(
-            inst['faixas'][faixa]['unissex_fem']
-            + inst['faixas'][faixa]['unissex_masc']
+            inst['faixas'][faixa]['dist_unissex_fem']
+            + inst['faixas'][faixa]['dist_unissex_masc']
             for resultado in resultados.values()
             for inst in resultado['instituicoes']
         )
