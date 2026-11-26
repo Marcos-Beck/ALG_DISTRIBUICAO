@@ -20,11 +20,11 @@ PRIORIDADES_QTDE = {
 
     1: {
         'min': 0,
-        'max': 300
+        'max': 250
     },
 
     2: {
-        'min': 301,
+        'min': 251,
         'max': None
     }
 

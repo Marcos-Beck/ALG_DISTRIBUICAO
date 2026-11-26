@@ -9,7 +9,7 @@ DATA = ROOT / 'data' / 'CE'
 # arquivos og
 ARQ_INSCRICOES = DATA / 'Conjunto de Dados - CE 26.xlsx'
 
-ARQ_ARRECADACOES = DATA / 'BASE_DADOS_CE_2025.xlsx'
+ARQ_ARRECADACOES = DATA / 'Arrecadacoes_Consolidadas.xlsx'
 
 ARQ_REGIAO = DATA / 'Regiao.csv'
 
