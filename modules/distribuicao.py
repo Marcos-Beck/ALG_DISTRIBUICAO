@@ -63,7 +63,8 @@ def preparar_grupos_distribuicao(
     grupos_geograficos,
     categorias,
     coluna_ordem='Ordem Inscrição',
-    coluna_cnpj_valido='CNPJ Válido'
+    coluna_cnpj_valido='CNPJ Válido',
+    colunas_extras=None
 ):
     """
     Reúne instituições de todas as regiões por prioridade,
@@ -109,6 +110,15 @@ def preparar_grupos_distribuicao(
                         if pd.notna(cnpj_valido)
                         else False
                     ) # garante que seja bool mesmo se vier como string
+
+                    if colunas_extras:
+                        instituicao['extras'] = {
+                            coluna: (
+                                '' if pd.isna(linha.get(coluna, None))
+                                else linha.get(coluna)
+                            )
+                            for coluna in colunas_extras
+                        }
 
                     instituicao['_sequencia'] = sequencia
                     sequencia += 1
@@ -1108,6 +1118,9 @@ def distribuir_todas_prioridades(
                 'Ordem Inscrição': original['ordem_inscricao'],
                 'CNPJ Válido': original['cnpj_valido']
             }
+
+            if original.get('extras'):
+                registro.update(original['extras'])
 
             total_solicitado = 0
             total_atendido = 0

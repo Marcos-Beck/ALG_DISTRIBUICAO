@@ -1,6 +1,6 @@
 import pandas as pd
 from modules import distribuicao, classificacao, relatorio, terminal
-from config.caixa_encantada import campanha as campanha, preparacao, categorias
+from config.caixa_encantada import campanha as campanha, preparacao, categorias, fontes
 
 #! armaneza informacoes para criação de relatorios:
 # comparativo: demanda x estoque disponivel 
@@ -38,7 +38,8 @@ def main():
 
         grupos_distribuicao = distribuicao.preparar_grupos_distribuicao(
             grupos_geograficos=grupos_geograficos,
-            categorias=categorias.CATEGORIAS
+            categorias=categorias.CATEGORIAS,
+            colunas_extras=fontes.COL_INSC_EXTRAS
         )
 
 

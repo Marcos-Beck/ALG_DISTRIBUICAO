@@ -9,7 +9,7 @@ DATA = ROOT / 'data' / 'CE'
 # arquivos og
 ARQ_INSCRICOES = DATA / 'Conjunto de Dados - CE 26.xlsx'
 
-ARQ_ARRECADACOES = DATA / 'Arrecadacoes_Consolidadas.xlsx'
+ARQ_ARRECADACOES = DATA / 'Conjunto de Dados - CE 26.xlsx'
 
 ARQ_REGIAO = DATA / 'Regiao.csv'
 
@@ -23,8 +23,6 @@ PLAN_ARRECADACOES = 'Arrecadações'
 # colunas
 COL_INSC = [
     'Beneficiario',
-    'Nome resp.',
-    'Contato resp.',
     'Cidade',
     'CNPJ',
 
@@ -54,4 +52,11 @@ COL_ARRE = [
 COL_REG = [
     'Região',
     'Município'
+]
+
+# colunas extras da inscricao preservadas na saida
+COL_INSC_EXTRAS = [
+    'Nome User',
+    'Nome resp.',
+    'Contato resp.'
 ]
