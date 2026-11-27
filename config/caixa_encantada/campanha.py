@@ -20,11 +20,11 @@ PRIORIDADES_QTDE = {
 
     1: {
         'min': 0,
-        'max': 250
+        'max': 210
     },
 
     2: {
-        'min': 251,
+        'min': 211,
         'max': None
     }
 
@@ -60,7 +60,7 @@ RESERVA = {
 
 MINIMO_ATENDIMENTO = {
     'ativo': True,
-    'quantidade': 200,
+    'quantidade': 210,
     'prioridades': [2]
 }
 
